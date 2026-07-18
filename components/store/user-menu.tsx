@@ -1,17 +1,17 @@
 "use client"
 
-import Link from "next/link"
 import { ClipboardList, Store, UserRound } from "lucide-react"
+import Link from "next/link"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
 export function UserMenu() {

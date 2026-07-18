@@ -1,18 +1,18 @@
 "use client"
 
-import Link from "next/link"
 import { Minus, Plus, ShoppingBag, Trash2, UtensilsCrossed } from "lucide-react"
+import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
 } from "@/components/ui/sheet"
 import { useCart } from "@/lib/cart/cart-context"
 import { useCartSheet } from "@/lib/cart/cart-sheet-context"

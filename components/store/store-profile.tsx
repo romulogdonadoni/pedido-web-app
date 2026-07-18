@@ -1,5 +1,5 @@
-import Link from "next/link"
 import { ArrowLeft, MapPin, Share2 } from "lucide-react"
+import Link from "next/link"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
