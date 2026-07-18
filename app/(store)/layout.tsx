@@ -14,9 +14,7 @@ export default async function StoreLayout({
   const store = await resolveStore()
 
   if (!store) {
-    return (
-      <TenantGate hint="http://pedido.localhost:3001/cowboy-burger-67" />
-    )
+    return <TenantGate />
   }
 
   return (

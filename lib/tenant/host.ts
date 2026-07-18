@@ -38,8 +38,8 @@ export function isValidTenantSlug(value: string) {
 /**
  * Resolve tenant from the first path segment.
  * Examples:
- * - /cowboy-burger-67 → cowboy-burger-67
- * - /cowboy-burger-67/carrinho → cowboy-burger-67
+ * - /{tenant} → tenant
+ * - /{tenant}/carrinho → tenant
  * - /carrinho → null
  */
 export function resolveTenantFromPath(

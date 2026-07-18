@@ -1,7 +1,7 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  // Storefront host: pedido.localhost (tenant is a path segment)
+  // Tenant is the first path segment: /{tenant}/…
   allowedDevOrigins: ["**.localhost"],
   images: {
     remotePatterns: [
