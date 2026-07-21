@@ -4,15 +4,9 @@ import { Minus, Plus, XIcon } from "lucide-react"
 import Image from "next/image"
 import * as React from "react"
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
+import { ItemOptionsSections } from "@/components/store/item-options-sections"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Sheet,
@@ -25,17 +19,23 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useCart } from "@/lib/cart/cart-context"
 import { useCartSheet } from "@/lib/cart/cart-sheet-context"
-import type { SelectedOption } from "@/lib/cart/types"
+import type { SelectedOption, SlotSelection } from "@/lib/cart/types"
 import {
+  defaultSlotSelections,
   discountPercent,
   formatBrl,
+  slotSelectionsExtraTotal,
   type MenuItem,
   type StoreMenu,
 } from "@/lib/menu/catalog"
 import {
-  countSelectedInGroup,
+  pruneOptionsForSlotSelections,
   toggleOptionSelection,
+  toggleSlotSelection,
   validateOptionGroups,
+  validateProductGroupOptions,
+  validateProductGroupSlotOptions,
+  validateProductGroupSlots,
 } from "@/lib/menu/options"
 import { cn } from "@/lib/utils"
 
@@ -54,6 +54,9 @@ export function ItemDetailSheet({
   const { openCart } = useCartSheet()
   const [displayItem, setDisplayItem] = React.useState(item)
   const [selected, setSelected] = React.useState<SelectedOption[]>([])
+  const [slotSelections, setSlotSelections] = React.useState<SlotSelection[]>(
+    []
+  )
   const [note, setNote] = React.useState("")
   const [qty, setQty] = React.useState(1)
   const [error, setError] = React.useState<string | null>(null)
@@ -67,20 +70,74 @@ export function ItemDetailSheet({
     setNote("")
     setQty(1)
     setError(null)
+    setSlotSelections(
+      defaultSlotSelections(displayItem?.productGroupSlots)
+    )
   }, [displayItem?.id])
 
   const discount = displayItem
     ? discountPercent(displayItem.price, displayItem.compareAtPrice)
     : 0
-  const extras = selected.reduce((sum, o) => sum + o.price, 0)
-  const unit = (displayItem?.price ?? 0) + extras
+  const optionExtras = selected.reduce((sum, o) => sum + o.price, 0)
+  const slotExtras = slotSelectionsExtraTotal(
+    displayItem?.productGroupSlots,
+    slotSelections
+  )
+  const unit = (displayItem?.price ?? 0) + optionExtras + slotExtras
   const groups = displayItem?.optionGroups ?? []
+  const isProductGroup = displayItem?.kind === "productGroup"
   const noteId = `sheet-item-note-${displayItem?.id ?? "closed"}`
 
-  function onToggle(groupId: string, optionId: string) {
+  function findOptionGroups(productId?: string) {
+    if (!displayItem || !productId) return groups
+    const fixed = displayItem.productGroupItems?.find(
+      (p) => p.productId === productId
+    )
+    if (fixed) return fixed.optionGroups ?? []
+    for (const slot of displayItem.productGroupSlots ?? []) {
+      const product = slot.products.find((p) => p.productId === productId)
+      if (product) return product.optionGroups ?? []
+    }
+    return []
+  }
+
+  function onToggle(
+    groupId: string,
+    optionId: string,
+    productId?: string,
+    namePrefix?: string
+  ) {
+    if (!displayItem) return
     setError(null)
+    const targetGroups = findOptionGroups(productId)
     setSelected((prev) =>
-      toggleOptionSelection(groups, prev, groupId, optionId)
+      toggleOptionSelection(
+        targetGroups,
+        prev,
+        groupId,
+        optionId,
+        productId,
+        namePrefix
+      )
+    )
+  }
+
+  function onSlotToggle(slotId: string, productId: string) {
+    if (!displayItem) return
+    setError(null)
+    const slots = displayItem.productGroupSlots ?? []
+    const nextSlots = toggleSlotSelection(
+      slots,
+      slotSelections,
+      slotId,
+      productId
+    )
+    const fixedIds = new Set(
+      (displayItem.productGroupItems ?? []).map((i) => i.productId)
+    )
+    setSlotSelections(nextSlots)
+    setSelected((prev) =>
+      pruneOptionsForSlotSelections(prev, fixedIds, nextSlots)
     )
   }
 
@@ -90,19 +147,51 @@ export function ItemDetailSheet({
       setError("A loja está offline no momento.")
       return
     }
-    const validation = validateOptionGroups(groups, selected)
-    if (validation) {
-      setError(validation)
-      return
+
+    if (isProductGroup) {
+      const slotErr = validateProductGroupSlots(
+        displayItem.productGroupSlots,
+        slotSelections
+      )
+      if (slotErr) {
+        setError(slotErr)
+        return
+      }
+      const itemsErr = validateProductGroupOptions(
+        displayItem.productGroupItems,
+        selected
+      )
+      if (itemsErr) {
+        setError(itemsErr)
+        return
+      }
+      const slotOptErr = validateProductGroupSlotOptions(
+        displayItem.productGroupSlots,
+        slotSelections,
+        selected
+      )
+      if (slotOptErr) {
+        setError(slotOptErr)
+        return
+      }
+    } else {
+      const validation = validateOptionGroups(groups, selected)
+      if (validation) {
+        setError(validation)
+        return
+      }
     }
+
     addItem({
       itemId: displayItem.id,
       name: displayItem.name,
       image: displayItem.image,
-      basePrice: displayItem.price,
+      basePrice: displayItem.price + slotExtras,
       selectedOptions: selected,
       note,
       qty,
+      productGroupId: isProductGroup ? displayItem.id : undefined,
+      slotSelections: isProductGroup ? slotSelections : undefined,
     })
     onOpenChange(false)
     openCart()
@@ -189,76 +278,13 @@ export function ItemDetailSheet({
                   </SheetHeader>
 
                   <div className="mt-5 space-y-5">
-                    {groups.length > 0 ? (
-                      <Accordion
-                        multiple
-                        defaultValue={[groups[0]?.id].filter(Boolean)}
-                      >
-                        {groups.map((group) => {
-                          const count = countSelectedInGroup(selected, group.id)
-                          return (
-                            <AccordionItem key={group.id} value={group.id}>
-                              <AccordionTrigger className="py-3 text-left">
-                                <span className="flex flex-col items-start gap-0.5">
-                                  <span className="font-medium">
-                                    {group.title}
-                                  </span>
-                                  <span className="text-xs font-normal text-muted-foreground">
-                                    Escolha{" "}
-                                    {group.min === group.max
-                                      ? group.min
-                                      : `até ${group.max}`}{" "}
-                                    {group.min > 0
-                                      ? "(obrigatório)"
-                                      : "(opcional)"}{" "}
-                                    · {count}/{group.max}
-                                  </span>
-                                </span>
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <ul className="space-y-2.5">
-                                  {group.options.map((option) => {
-                                    const checked = selected.some(
-                                      (s) =>
-                                        s.groupId === group.id &&
-                                        s.optionId === option.id
-                                    )
-                                    return (
-                                      <li key={option.id}>
-                                        <label
-                                          className={cn(
-                                            "flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-3 transition-colors",
-                                            "active:bg-muted/60",
-                                            checked
-                                              ? "border-primary bg-primary/5"
-                                              : "hover:bg-muted/40"
-                                          )}
-                                        >
-                                          <Checkbox
-                                            checked={checked}
-                                            onCheckedChange={() =>
-                                              onToggle(group.id, option.id)
-                                            }
-                                          />
-                                          <span className="min-w-0 flex-1 text-sm font-medium">
-                                            {option.name}
-                                          </span>
-                                          {option.price > 0 ? (
-                                            <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
-                                              + {formatBrl(option.price)}
-                                            </span>
-                                          ) : null}
-                                        </label>
-                                      </li>
-                                    )
-                                  })}
-                                </ul>
-                              </AccordionContent>
-                            </AccordionItem>
-                          )
-                        })}
-                      </Accordion>
-                    ) : null}
+                    <ItemOptionsSections
+                      item={displayItem}
+                      selected={selected}
+                      onToggle={onToggle}
+                      slotSelections={slotSelections}
+                      onSlotToggle={onSlotToggle}
+                    />
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium" htmlFor={noteId}>

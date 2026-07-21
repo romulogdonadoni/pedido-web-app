@@ -3,6 +3,13 @@ export type SelectedOption = {
   optionId: string
   name: string
   price: number
+  /** Set when the option belongs to a product inside a product group. */
+  productId?: string
+}
+
+export type SlotSelection = {
+  slotId: string
+  productId: string
 }
 
 export type CartLine = {
@@ -15,6 +22,9 @@ export type CartLine = {
   selectedOptions: SelectedOption[]
   note?: string
   unitPrice: number
+  /** Present when the line is a ProductGroup. */
+  productGroupId?: string
+  slotSelections?: SlotSelection[]
 }
 
 export function lineUnitPrice(
@@ -28,13 +38,22 @@ export function lineUnitPrice(
 export function makeLineKey(
   itemId: string,
   selectedOptions: SelectedOption[],
-  note?: string
+  note?: string,
+  productGroupId?: string,
+  slotSelections?: SlotSelection[]
 ) {
   const opts = [...selectedOptions]
-    .map((o) => `${o.groupId}:${o.optionId}`)
+    .map(
+      (o) =>
+        `${o.productId ?? ""}:${o.groupId}:${o.optionId}`
+    )
     .sort()
     .join("|")
-  return `${itemId}::${opts}::${note?.trim() || ""}`
+  const slots = [...(slotSelections ?? [])]
+    .map((s) => `${s.slotId}:${s.productId}`)
+    .sort()
+    .join("|")
+  return `${productGroupId ?? itemId}::${opts}::${slots}::${note?.trim() || ""}`
 }
 
 export function cartSubtotal(lines: CartLine[]) {

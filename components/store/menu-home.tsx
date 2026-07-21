@@ -10,6 +10,7 @@ import { StoreHeader } from "@/components/store/store-header"
 import { useCart } from "@/lib/cart/cart-context"
 import {
   formatBrl,
+  menuEntryAsMenuItem,
   type MenuItem,
   type StoreMenu,
 } from "@/lib/menu/catalog"
@@ -18,15 +19,17 @@ export function MenuHome({ menu }: { menu: StoreMenu }) {
   const { qty, subtotal } = useCart()
   const [selectedItem, setSelectedItem] = React.useState<MenuItem | null>(null)
 
-  const sections = menu.categories
-    .map((category) => {
-      const items =
-        category === "Destaques"
-          ? menu.items.filter((item) => item.popular)
-          : menu.items.filter((item) => item.category === category)
-      return { category, items }
-    })
-    .filter((section) => section.items.length > 0)
+  const sections = React.useMemo(() => {
+    return (menu.groups ?? [])
+      .map((group) => {
+        const items = [...group.items]
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((entry) => menuEntryAsMenuItem(entry, group.name))
+          .filter((item): item is MenuItem => item != null)
+        return { id: group.id, category: group.name, items }
+      })
+      .filter((section) => section.items.length > 0)
+  }, [menu])
 
   return (
     <div className="flex flex-1 flex-col pb-24">
@@ -37,9 +40,9 @@ export function MenuHome({ menu }: { menu: StoreMenu }) {
         </div>
 
         <div className="flex flex-col gap-8 px-4 pt-4 lg:px-0 lg:pt-6">
-          {sections.map(({ category, items }) => (
+          {sections.map(({ id, category, items }) => (
             <section
-              key={category}
+              key={id}
               id={`cat-${slugify(category)}`}
               className="scroll-mt-20"
             >
@@ -49,7 +52,7 @@ export function MenuHome({ menu }: { menu: StoreMenu }) {
               <div className="grid gap-3 md:grid-cols-2">
                 {items.map((item) => (
                   <ItemRow
-                    key={item.id}
+                    key={`${id}-${item.id}`}
                     item={item}
                     onSelect={setSelectedItem}
                   />

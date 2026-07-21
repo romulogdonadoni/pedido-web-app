@@ -13,6 +13,44 @@ export type OptionGroup = {
   options: MenuOption[]
 }
 
+export type ProductGroupItem = {
+  productId: string
+  name: string
+  quantity: number
+  optionGroups?: OptionGroup[]
+}
+
+export type ProductGroupSlotProduct = {
+  productId: string
+  name: string
+  extraPrice: number
+  isDefault: boolean
+  optionGroups?: OptionGroup[]
+}
+
+export type ProductGroupSlot = {
+  id: string
+  title: string
+  minSelect: number
+  maxSelect: number
+  products: ProductGroupSlotProduct[]
+}
+
+export type ProductGroup = {
+  id: string
+  name: string
+  type: string
+  priceMode: string
+  price: number
+  discountValue?: number
+  discountType?: string
+  description?: string
+  image?: string
+  category: string
+  items: ProductGroupItem[]
+  slots: ProductGroupSlot[]
+}
+
 export type MenuItem = {
   id: string
   name: string
@@ -24,6 +62,27 @@ export type MenuItem = {
   badge?: string
   popular?: boolean
   optionGroups?: OptionGroup[]
+  /** Present when this row represents a ProductGroup, not a MenuProduct. */
+  kind?: "product" | "productGroup"
+  productGroupItems?: ProductGroupItem[]
+  productGroupSlots?: ProductGroupSlot[]
+  priceMode?: string
+}
+
+export type StoreMenuEntryType = "product" | "productGroup"
+
+export type StoreMenuEntry = {
+  id: string
+  type: StoreMenuEntryType
+  sortOrder: number
+  product?: MenuItem
+  productGroup?: ProductGroup
+}
+
+export type StoreMenuGroup = {
+  id: string
+  name: string
+  items: StoreMenuEntry[]
 }
 
 export type StoreHour = {
@@ -61,277 +120,105 @@ export type StoreMenu = {
   hours: StoreHour[]
   payments: PaymentMethod[]
   address: StoreAddress
+  menuId?: string
+  menuName?: string
+  /** Menu sections (groups) with ordered product / productGroup entries. */
+  groups: StoreMenuGroup[]
+  /** Group names for nav (mirrors `groups[].name`). */
   categories: string[]
-  items: MenuItem[]
+  /** @deprecated Empty from API; prefer `groups`. Kept for compat. */
+  items?: MenuItem[]
+  /** @deprecated Empty from API; prefer `groups`. Kept for compat. */
+  productGroups?: ProductGroup[]
 }
 
-const drinkOptions: MenuOption[] = [
-  { id: "guarana-269", name: "Guaraná 269ml", price: 0 },
-  { id: "sprite-220", name: "Sprite 220ml", price: 0 },
-  { id: "coca-269", name: "Coca-Cola 269ml", price: 0 },
-]
+export function productGroupAsMenuItem(group: ProductGroup): MenuItem {
+  const itemDesc = group.items
+    .map((p) => `${p.quantity}× ${p.name}`)
+    .join(" · ")
+  const slotDesc = group.slots.map((s) => s.title).join(" · ")
+  const description =
+    group.description ||
+    [itemDesc, slotDesc].filter(Boolean).join(" · ") ||
+    ""
 
-const upgradeDrinks: MenuOption[] = [
-  { id: "coca-350", name: "Coca-Cola 350ml", price: 4.9 },
-  { id: "guarana-350", name: "Guaraná 350ml", price: 4.9 },
-  { id: "sprite-350", name: "Sprite 350ml", price: 4.9 },
-]
-
-const extraMeat: MenuOption[] = [
-  { id: "blend-100", name: "Blend artesanal +100g", price: 9.9 },
-  { id: "bacon", name: "Bacon crocante", price: 6.9 },
-  { id: "cheddar", name: "Cheddar extra", price: 4.9 },
-  { id: "onion", name: "Onion rings (3 un)", price: 7.9 },
-]
-
-const catalogs: Record<string, StoreMenu> = {
-  "cowboy-burger-67": {
-    tenant: "cowboy-burger-67",
-    name: "Cowboy Burger 67",
-    tagline: "Burgers defumados e milkshakes gelados",
-    categoryLabel: "Hamburgueria Country",
-    bannerTitle: "Frete grátis",
-    bannerSubtitle: "Verifique a disponibilidade para sua região",
-    bannerUrl: "/images/store-banner.png",
-    isOpen: true,
-    minOrder: 30,
-    hours: [
-      { day: "Domingo", hours: "17h às 23h30" },
-      { day: "Segunda-feira", hours: "17h às 23h" },
-      { day: "Terça-feira", hours: "17h às 23h" },
-      { day: "Quarta-feira", hours: "17h às 23h" },
-      { day: "Quinta-feira", hours: "17h às 23h" },
-      { day: "Sexta-feira", hours: "17h às 23h30" },
-      { day: "Sábado", hours: "17h às 23h30" },
-    ],
-    payments: [
-      { id: "pix", name: "Pix", kind: "online" },
-      { id: "gpay", name: "Google Pay", kind: "online" },
-      { id: "nubank", name: "Nubank", kind: "online" },
-      {
-        id: "card-online",
-        name: "Cartão de crédito",
-        kind: "online",
-        brands: ["Visa", "Mastercard", "Elo", "Amex"],
-      },
-      { id: "cash", name: "Dinheiro", kind: "delivery" },
-      {
-        id: "card-delivery",
-        name: "Cartão na entrega",
-        kind: "delivery",
-        brands: ["Visa", "Mastercard", "Elo", "Hipercard"],
-      },
-    ],
-    address: {
-      line: "Avenida Bom Pastor, 1050 - Vila Vilas Boas",
-      city: "Campo Grande",
-      state: "MS",
-      zip: "79051-191",
-      lat: -20.4697,
-      lng: -54.6201,
-    },
-    categories: [
-      "Destaques",
-      "Combos",
-      "Burgers",
-      "Para compartilhar",
-      "Acompanhamentos",
-      "Bebidas",
-    ],
-    items: [
-      {
-        id: "combo-casal",
-        name: "Combo Casal Fogo e Brasa",
-        description:
-          "2x Smash Burger (pão brioche, blend 100g, cheddar, molho da casa) + 200g de batata + refrigerantes inclusos.",
-        price: 74.9,
-        compareAtPrice: 83.22,
-        category: "Combos",
-        badge: "2x",
-        popular: true,
-        image: "/images/combo-casal.png",
-        optionGroups: [
-          {
-            id: "drinks-included",
-            title: "Refrigerantes inclusos no combo",
-            min: 2,
-            max: 2,
-            options: drinkOptions,
-          },
-          {
-            id: "upgrade-drink",
-            title: "Upgrade para 350ml",
-            min: 0,
-            max: 1,
-            options: upgradeDrinks,
-          },
-          {
-            id: "extra-meat",
-            title: "Deseja adicionar extras",
-            min: 0,
-            max: 4,
-            options: extraMeat,
-          },
-        ],
-      },
-      {
-        id: "combo-classic",
-        name: "Combo Cowboy Classic",
-        description:
-          "Classic Cowboy + batata rústica + refrigerante 350ml.",
-        price: 47.77,
-        category: "Combos",
-        popular: true,
-        image: "/images/combo-classic.png",
-        optionGroups: [
-          {
-            id: "drink",
-            title: "Escolha o refrigerante",
-            min: 1,
-            max: 1,
-            options: upgradeDrinks.map((o) => ({ ...o, price: 0 })),
-          },
-        ],
-      },
-      {
-        id: "combo-onion",
-        name: "Combo Onion Bacon",
-        description: "Burger com onion e bacon + batata + bebida.",
-        price: 54.9,
-        category: "Combos",
-        image: "/images/combo-onion.png",
-      },
-      {
-        id: "combo-familia",
-        name: "Combo Família Cowboy",
-        description: "4 burgers + 2 porções de batata + 4 bebidas.",
-        price: 104.8,
-        category: "Para compartilhar",
-        badge: "4x",
-        popular: true,
-        image: "/images/combo-familia.png",
-      },
-      {
-        id: "texas-classic",
-        name: "Hambúrguer — Texas Classic",
-        description:
-          "Pão brioche dourado com blend artesanal, queijo, alface e molho especial.",
-        price: 31.9,
-        category: "Burgers",
-        popular: true,
-        image: "/images/texas-classic.png",
-        optionGroups: [
-          {
-            id: "extras",
-            title: "Extras",
-            min: 0,
-            max: 3,
-            options: extraMeat,
-          },
-        ],
-      },
-      {
-        id: "cowboy-classic",
-        name: "Hambúrguer — Cowboy Classic",
-        description:
-          "Blend 160g, queijo prato, alface, tomate e maionese da casa.",
-        price: 33.7,
-        category: "Burgers",
-        popular: true,
-        image: "/images/cowboy-classic.png",
-      },
-      {
-        id: "cowboy-special",
-        name: "Hambúrguer — Cowboy Special",
-        description: "Blend defumado, cheddar, bacon e barbecue.",
-        price: 37,
-        category: "Burgers",
-        image: "/images/cowboy-special.png",
-      },
-      {
-        id: "american-cowboy",
-        name: "Hambúrguer — American Cowboy",
-        description: "Blend 180g, cheddar duplo, picles e molho ranch.",
-        price: 38,
-        category: "Burgers",
-        image: "/images/american-cowboy.png",
-      },
-      {
-        id: "fries",
-        name: "Batata rústica",
-        description: "Porção generosa com páprica e sal de alecrim.",
-        price: 16.9,
-        category: "Acompanhamentos",
-        popular: true,
-        image: "/images/batata-rustica.png",
-      },
-      {
-        id: "onion-rings",
-        name: "Onion rings",
-        description: "Anéis crocantes com molho especial.",
-        price: 18.9,
-        category: "Acompanhamentos",
-        image: "/images/onion-rings.png",
-      },
-      {
-        id: "cola",
-        name: "Refrigerante 350ml",
-        description: "Coca-Cola, Guaraná ou Sprite.",
-        price: 8.9,
-        category: "Bebidas",
-        image: "/images/refrigerante.png",
-        optionGroups: [
-          {
-            id: "flavor",
-            title: "Sabor",
-            min: 1,
-            max: 1,
-            options: [
-              { id: "coca", name: "Coca-Cola", price: 0 },
-              { id: "guarana", name: "Guaraná", price: 0 },
-              { id: "sprite", name: "Sprite", price: 0 },
-            ],
-          },
-        ],
-      },
-      {
-        id: "shake",
-        name: "Milkshake",
-        description: "Chocolate, morango ou baunilha — 400ml.",
-        price: 19.9,
-        category: "Bebidas",
-        popular: true,
-        image: "/images/milkshake.png",
-        optionGroups: [
-          {
-            id: "flavor",
-            title: "Sabor",
-            min: 1,
-            max: 1,
-            options: [
-              { id: "choco", name: "Chocolate", price: 0 },
-              { id: "strawberry", name: "Morango", price: 0 },
-              { id: "vanilla", name: "Baunilha", price: 0 },
-            ],
-          },
-        ],
-      },
-    ],
-  },
+  return {
+    id: group.id,
+    name: group.name,
+    description,
+    price: group.price,
+    category: group.category,
+    image: group.image,
+    kind: "productGroup",
+    productGroupItems: group.items,
+    productGroupSlots: group.slots,
+    priceMode: group.priceMode,
+  }
 }
 
-export function getStoreMenu(tenant: string | null): StoreMenu | null {
-  if (!tenant) return null
-  return catalogs[tenant] ?? null
+/** Resolve a group entry to a sellable MenuItem (for list / detail / cart). */
+export function menuEntryAsMenuItem(
+  entry: StoreMenuEntry,
+  groupName?: string
+): MenuItem | null {
+  if (entry.type === "product" && entry.product) {
+    return {
+      ...entry.product,
+      kind: "product",
+      category: groupName ?? entry.product.category,
+    }
+  }
+  if (entry.type === "productGroup" && entry.productGroup) {
+    const item = productGroupAsMenuItem(entry.productGroup)
+    return groupName ? { ...item, category: groupName } : item
+  }
+  return null
+}
+
+/** Flatten all sellable MenuItems from menu.groups (ordered by group + sortOrder). */
+export function flattenSellableFromGroups(menu: StoreMenu): MenuItem[] {
+  const result: MenuItem[] = []
+  for (const group of menu.groups ?? []) {
+    const entries = [...group.items].sort((a, b) => a.sortOrder - b.sortOrder)
+    for (const entry of entries) {
+      const item = menuEntryAsMenuItem(entry, group.name)
+      if (item) result.push(item)
+    }
+  }
+  return result
 }
 
 export function getMenuItem(
-  tenant: string | null,
+  menu: StoreMenu | null,
   itemId: string
 ): MenuItem | null {
-  const menu = getStoreMenu(tenant)
   if (!menu) return null
-  return menu.items.find((item) => item.id === itemId) ?? null
+
+  for (const group of menu.groups ?? []) {
+    for (const entry of group.items) {
+      if (entry.type === "product" && entry.product?.id === itemId) {
+        return menuEntryAsMenuItem(entry, group.name)
+      }
+      if (entry.type === "productGroup" && entry.productGroup?.id === itemId) {
+        return menuEntryAsMenuItem(entry, group.name)
+      }
+    }
+  }
+
+  const product = menu.items?.find((item) => item.id === itemId)
+  if (product) return { ...product, kind: "product" as const }
+  const group = menu.productGroups?.find((g) => g.id === itemId)
+  return group ? productGroupAsMenuItem(group) : null
+}
+
+export function allSellableItems(menu: StoreMenu): MenuItem[] {
+  const fromGroups = flattenSellableFromGroups(menu)
+  if (fromGroups.length > 0) return fromGroups
+
+  return [
+    ...(menu.items ?? []).map((item) => ({ ...item, kind: "product" as const })),
+    ...(menu.productGroups ?? []).map(productGroupAsMenuItem),
+  ]
 }
 
 export function searchMenuItems(
@@ -340,7 +227,7 @@ export function searchMenuItems(
 ): MenuItem[] {
   const q = query.trim().toLowerCase()
   if (!q) return []
-  return menu.items.filter(
+  return allSellableItems(menu).filter(
     (item) =>
       item.name.toLowerCase().includes(q) ||
       item.description.toLowerCase().includes(q) ||
@@ -358,4 +245,32 @@ export function formatBrl(value: number) {
 export function discountPercent(price: number, compareAt?: number) {
   if (!compareAt || compareAt <= price) return null
   return Math.round(((compareAt - price) / compareAt) * 100)
+}
+
+export function slotSelectionsExtraTotal(
+  slots: ProductGroupSlot[] | undefined,
+  selections: { slotId: string; productId: string }[] | undefined
+) {
+  if (!slots?.length || !selections?.length) return 0
+  let total = 0
+  for (const sel of selections) {
+    const slot = slots.find((s) => s.id === sel.slotId)
+    const product = slot?.products.find((p) => p.productId === sel.productId)
+    total += product?.extraPrice ?? 0
+  }
+  return total
+}
+
+export function defaultSlotSelections(
+  slots: ProductGroupSlot[] | undefined
+): { slotId: string; productId: string }[] {
+  if (!slots?.length) return []
+  const selections: { slotId: string; productId: string }[] = []
+  for (const slot of slots) {
+    const defaults = slot.products.filter((p) => p.isDefault)
+    for (const product of defaults.slice(0, slot.maxSelect)) {
+      selections.push({ slotId: slot.id, productId: product.productId })
+    }
+  }
+  return selections
 }

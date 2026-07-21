@@ -1,7 +1,8 @@
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 
-import { getStoreMenu, type StoreMenu } from "@/lib/menu/catalog"
+import { fetchStoreMenu } from "@/lib/menu/fetch-store-menu"
+import type { StoreMenu } from "@/lib/menu/catalog"
 import { resolveTenant } from "@/lib/tenant/host"
 
 export async function resolveStore(): Promise<{
@@ -14,7 +15,7 @@ export async function resolveStore(): Promise<{
     cookieHeader: headerStore.get("cookie"),
   })
   if (!tenant) return null
-  const menu = getStoreMenu(tenant)
+  const menu = await fetchStoreMenu(tenant)
   if (!menu) return null
   return { tenant, menu }
 }

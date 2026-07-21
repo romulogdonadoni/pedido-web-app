@@ -9,6 +9,7 @@ import {
   makeLineKey,
   type CartLine,
   type SelectedOption,
+  type SlotSelection,
 } from "@/lib/cart/types"
 
 const STORAGE_PREFIX = "whitelabel.pedido.cart."
@@ -27,6 +28,8 @@ type CartContextValue = {
     selectedOptions: SelectedOption[]
     note?: string
     qty?: number
+    productGroupId?: string
+    slotSelections?: SlotSelection[]
   }) => void
   setQty: (key: string, qty: number) => void
   setNote: (key: string, note: string) => void
@@ -76,8 +79,15 @@ export function CartProvider({
   const addItem: CartContextValue["addItem"] = React.useCallback(
     (input) => {
       const selectedOptions = input.selectedOptions
+      const slotSelections = input.slotSelections
       const note = input.note?.trim() || undefined
-      const key = makeLineKey(input.itemId, selectedOptions, note)
+      const key = makeLineKey(
+        input.itemId,
+        selectedOptions,
+        note,
+        input.productGroupId,
+        slotSelections
+      )
       const unitPrice = lineUnitPrice(input.basePrice, selectedOptions)
       const addQty = input.qty ?? 1
 
@@ -100,6 +110,8 @@ export function CartProvider({
             selectedOptions,
             note,
             unitPrice,
+            productGroupId: input.productGroupId,
+            slotSelections,
           },
         ]
       })

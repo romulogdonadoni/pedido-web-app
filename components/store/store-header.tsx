@@ -7,7 +7,7 @@ import Link from "next/link"
 import { CartTriggerButton } from "@/components/cart/cart-trigger-button"
 import { UserMenu } from "@/components/store/user-menu"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatBrl, type StoreMenu } from "@/lib/menu/catalog"
@@ -53,6 +53,7 @@ export function StoreHeader({ menu }: { menu: StoreMenu }) {
 
       <div className="flex items-start gap-3 lg:gap-4 lg:px-6 lg:pb-6">
         <Avatar className="-mt-10 size-14 rounded-full border-2 border-background shadow-md lg:-mt-12 lg:size-16">
+          {menu.logo ? <AvatarImage src={menu.logo} alt={menu.name} /> : null}
           <AvatarFallback className="rounded-full text-sm font-semibold">
             {initials}
           </AvatarFallback>

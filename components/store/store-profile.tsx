@@ -1,7 +1,8 @@
 import { ArrowLeft, MapPin, Share2 } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -33,17 +34,32 @@ export function StoreProfile({ menu }: { menu: StoreMenu }) {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:px-6 lg:pt-2">
         <div className="min-w-0">
           <div className="space-y-3 px-4 pt-4 lg:px-0 lg:pt-0">
-            <div className="overflow-hidden rounded-2xl bg-muted px-4 py-8 lg:rounded-3xl lg:px-6 lg:py-10">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                {menu.bannerTitle}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {menu.bannerSubtitle}
-              </p>
+            <div className="relative min-h-32 overflow-hidden rounded-2xl bg-muted lg:min-h-40 lg:rounded-3xl">
+              {menu.bannerUrl ? (
+                <Image
+                  src={menu.bannerUrl}
+                  alt=""
+                  fill
+                  className="object-cover object-center"
+                  sizes="(max-width: 1024px) 100vw, 40rem"
+                />
+              ) : (
+                <div className="flex size-full min-h-32 flex-col justify-center px-4 py-8 lg:min-h-40 lg:px-6">
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    {menu.bannerTitle}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {menu.bannerSubtitle}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex items-start gap-3">
               <Avatar className="size-14 border lg:size-16">
+                {menu.logo ? (
+                  <AvatarImage src={menu.logo} alt={menu.name} />
+                ) : null}
                 <AvatarFallback className="text-sm font-semibold">
                   {menu.name
                     .split(" ")
