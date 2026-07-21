@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
 import { useCart } from "@/lib/cart/cart-context"
-import { useCartSheet } from "@/lib/cart/cart-sheet-context"
 import type { SelectedOption, SlotSelection } from "@/lib/cart/types"
 import {
   defaultSlotSelections,
@@ -38,6 +37,7 @@ import {
   validateProductGroupSlots,
 } from "@/lib/menu/options"
 import { cn } from "@/lib/utils"
+import { Label } from "../ui/label"
 
 export function ItemDetailSheet({
   menu,
@@ -51,7 +51,6 @@ export function ItemDetailSheet({
   onOpenChange: (open: boolean) => void
 }) {
   const { addItem } = useCart()
-  const { openCart } = useCartSheet()
   const [displayItem, setDisplayItem] = React.useState(item)
   const [selected, setSelected] = React.useState<SelectedOption[]>([])
   const [slotSelections, setSlotSelections] = React.useState<SlotSelection[]>(
@@ -192,9 +191,15 @@ export function ItemDetailSheet({
       qty,
       productGroupId: isProductGroup ? displayItem.id : undefined,
       slotSelections: isProductGroup ? slotSelections : undefined,
+      fixedItems: isProductGroup
+        ? (displayItem.productGroupItems ?? []).map((i) => ({
+            productId: i.productId,
+            name: i.name,
+            quantity: i.quantity,
+          }))
+        : undefined,
     })
     onOpenChange(false)
-    openCart()
   }
 
   return (
@@ -287,9 +292,9 @@ export function ItemDetailSheet({
                     />
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor={noteId}>
+                      <Label className="text-sm font-medium" htmlFor={noteId}>
                         Observação
-                      </label>
+                      </Label>
                       <Textarea
                         id={noteId}
                         value={note}

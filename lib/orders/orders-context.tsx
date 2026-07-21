@@ -9,11 +9,15 @@ import {
   type Order,
   type OrderAddress,
   type OrderCustomer,
+  type OrderStatus,
   type PaymentChoice,
 } from "@/lib/orders/types"
 import type { CartLine } from "@/lib/cart/types"
 
 type PlaceOrderInput = {
+  id?: string
+  publicNumber?: string
+  status?: OrderStatus
   fulfillment: FulfillmentType
   payment: PaymentChoice
   customer: OrderCustomer
@@ -30,6 +34,10 @@ type OrdersContextValue = {
   hydrated: boolean
   placeOrder: (input: PlaceOrderInput) => Order
   getOrder: (id: string) => Order | undefined
+  patchOrder: (
+    id: string,
+    patch: Partial<Pick<Order, "status" | "publicNumber">>
+  ) => void
 }
 
 const OrdersContext = React.createContext<OrdersContextValue | null>(null)
@@ -74,10 +82,11 @@ export function OrdersProvider({
   const placeOrder = React.useCallback(
     (input: PlaceOrderInput) => {
       const order: Order = {
-        id: createOrderId(),
+        id: input.id ?? createOrderId(),
+        publicNumber: input.publicNumber,
         tenant,
         createdAt: new Date().toISOString(),
-        status: "received",
+        status: input.status ?? "awaiting_acceptance",
         fulfillment: input.fulfillment,
         payment: input.payment,
         customer: input.customer,
@@ -88,20 +97,52 @@ export function OrdersProvider({
         total: input.subtotal + input.deliveryFee,
         note: input.note,
       }
-      setOrders((prev) => [order, ...prev])
+      setOrders((prev) => {
+        const without = prev.filter((o) => o.id !== order.id)
+        return [order, ...without]
+      })
       return order
     },
     [tenant]
   )
 
   const getOrder = React.useCallback(
-    (id: string) => orders.find((order) => order.id === id),
+    (id: string) =>
+      orders.find(
+        (order) => order.id === id || order.publicNumber === id
+      ),
     [orders]
+  )
+
+  const patchOrder = React.useCallback(
+    (id: string, patch: Partial<Pick<Order, "status" | "publicNumber">>) => {
+      setOrders((prev) => {
+        let changed = false
+        const next = prev.map((order) => {
+          if (order.id !== id && order.publicNumber !== id) return order
+          const status = patch.status ?? order.status
+          const publicNumber =
+            patch.publicNumber !== undefined
+              ? patch.publicNumber
+              : order.publicNumber
+          if (
+            order.status === status &&
+            order.publicNumber === publicNumber
+          ) {
+            return order
+          }
+          changed = true
+          return { ...order, ...patch }
+        })
+        return changed ? next : prev
+      })
+    },
+    []
   )
 
   return (
     <OrdersContext.Provider
-      value={{ tenant, orders, hydrated, placeOrder, getOrder }}
+      value={{ tenant, orders, hydrated, placeOrder, getOrder, patchOrder }}
     >
       {children}
     </OrdersContext.Provider>

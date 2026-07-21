@@ -7,6 +7,7 @@ import {
   cartSubtotal,
   lineUnitPrice,
   makeLineKey,
+  type CartFixedItem,
   type CartLine,
   type SelectedOption,
   type SlotSelection,
@@ -30,6 +31,7 @@ type CartContextValue = {
     qty?: number
     productGroupId?: string
     slotSelections?: SlotSelection[]
+    fixedItems?: CartFixedItem[]
   }) => void
   setQty: (key: string, qty: number) => void
   setNote: (key: string, note: string) => void
@@ -112,6 +114,7 @@ export function CartProvider({
             unitPrice,
             productGroupId: input.productGroupId,
             slotSelections,
+            fixedItems: input.fixedItems,
           },
         ]
       })

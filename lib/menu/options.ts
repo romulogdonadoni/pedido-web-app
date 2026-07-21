@@ -111,9 +111,15 @@ export function toggleSlotSelection(
       }
       return selections
     }
+    const product = slot.products.find((p) => p.productId === productId)
     return [
       ...selections.filter((s) => s.slotId !== slotId),
-      { slotId, productId },
+      {
+        slotId,
+        productId,
+        slotTitle: slot.title,
+        productName: product?.name,
+      },
     ]
   }
 
@@ -126,7 +132,16 @@ export function toggleSlotSelection(
   const inSlot = selections.filter((s) => s.slotId === slotId)
   if (inSlot.length >= slot.maxSelect) return selections
 
-  return [...selections, { slotId, productId }]
+  const product = slot.products.find((p) => p.productId === productId)
+  return [
+    ...selections,
+    {
+      slotId,
+      productId,
+      slotTitle: slot.title,
+      productName: product?.name,
+    },
+  ]
 }
 
 /** Drops selected options that belong to products no longer chosen in slots. */

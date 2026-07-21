@@ -18,7 +18,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { useCart } from "@/lib/cart/cart-context"
-import { useCartSheet } from "@/lib/cart/cart-sheet-context"
 import type { SelectedOption, SlotSelection } from "@/lib/cart/types"
 import {
   defaultSlotSelections,
@@ -37,6 +36,7 @@ import {
   validateProductGroupSlotOptions,
   validateProductGroupSlots,
 } from "@/lib/menu/options"
+import { Label } from "../ui/label"
 
 export function ItemDetailDialog({
   menu,
@@ -50,7 +50,6 @@ export function ItemDetailDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const { addItem } = useCart()
-  const { openCart } = useCartSheet()
   const [displayItem, setDisplayItem] = React.useState(item)
   const [selected, setSelected] = React.useState<SelectedOption[]>([])
   const [slotSelections, setSlotSelections] = React.useState<SlotSelection[]>(
@@ -191,9 +190,15 @@ export function ItemDetailDialog({
       qty,
       productGroupId: isProductGroup ? displayItem.id : undefined,
       slotSelections: isProductGroup ? slotSelections : undefined,
+      fixedItems: isProductGroup
+        ? (displayItem.productGroupItems ?? []).map((i) => ({
+            productId: i.productId,
+            name: i.name,
+            quantity: i.quantity,
+          }))
+        : undefined,
     })
     onOpenChange(false)
-    openCart()
   }
 
   return (
@@ -290,9 +295,9 @@ export function ItemDetailDialog({
                 />
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor={noteId}>
+                  <Label className="text-sm font-medium" htmlFor={noteId}>
                     Observação
-                  </label>
+                  </Label>
                   <Textarea
                     id={noteId}
                     value={note}

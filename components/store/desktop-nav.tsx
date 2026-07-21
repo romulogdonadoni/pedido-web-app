@@ -5,7 +5,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { CartTriggerButton } from "@/components/cart/cart-trigger-button"
-import { UserMenu } from "@/components/store/user-menu"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
 
@@ -58,7 +57,6 @@ export function DesktopNav({ storeName }: { storeName: string }) {
           size="icon"
           className="rounded-full shadow-sm"
         />
-        <UserMenu />
         <CartTriggerButton className="shadow-sm" />
       </div>
     </header>

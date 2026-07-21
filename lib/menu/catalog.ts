@@ -239,6 +239,8 @@ export function formatBrl(value: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value)
 }
 
@@ -263,13 +265,28 @@ export function slotSelectionsExtraTotal(
 
 export function defaultSlotSelections(
   slots: ProductGroupSlot[] | undefined
-): { slotId: string; productId: string }[] {
+): {
+  slotId: string
+  productId: string
+  slotTitle: string
+  productName: string
+}[] {
   if (!slots?.length) return []
-  const selections: { slotId: string; productId: string }[] = []
+  const selections: {
+    slotId: string
+    productId: string
+    slotTitle: string
+    productName: string
+  }[] = []
   for (const slot of slots) {
     const defaults = slot.products.filter((p) => p.isDefault)
     for (const product of defaults.slice(0, slot.maxSelect)) {
-      selections.push({ slotId: slot.id, productId: product.productId })
+      selections.push({
+        slotId: slot.id,
+        productId: product.productId,
+        slotTitle: slot.title,
+        productName: product.name,
+      })
     }
   }
   return selections

@@ -5,7 +5,6 @@ import Image from "next/image"
 import Link from "next/link"
 
 import { CartTriggerButton } from "@/components/cart/cart-trigger-button"
-import { UserMenu } from "@/components/store/user-menu"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -121,7 +120,6 @@ export function StoreHeader({ menu }: { menu: StoreMenu }) {
           <Button variant="ghost" size="icon-sm" onClick={share}>
             <Share2 className="size-4" />
           </Button>
-          <UserMenu />
           <CartTriggerButton
             variant="ghost"
             size="icon-sm"

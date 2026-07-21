@@ -10,6 +10,14 @@ export type SelectedOption = {
 export type SlotSelection = {
   slotId: string
   productId: string
+  slotTitle?: string
+  productName?: string
+}
+
+export type CartFixedItem = {
+  productId: string
+  name: string
+  quantity: number
 }
 
 export type CartLine = {
@@ -25,6 +33,47 @@ export type CartLine = {
   /** Present when the line is a ProductGroup. */
   productGroupId?: string
   slotSelections?: SlotSelection[]
+  /** Snapshot of fixed products inside a combo/kit. */
+  fixedItems?: CartFixedItem[]
+}
+
+/** Shape persisted in OrderLine.OptionsJson */
+export type OrderLineOptionsPayload = {
+  selectedOptions?: SelectedOption[]
+  slotSelections?: SlotSelection[]
+  fixedItems?: CartFixedItem[]
+}
+
+export function parseOrderLineOptions(
+  raw: string | null | undefined
+): OrderLineOptionsPayload {
+  if (!raw?.trim()) return {}
+  try {
+    const parsed = JSON.parse(raw) as OrderLineOptionsPayload
+    return {
+      selectedOptions: Array.isArray(parsed.selectedOptions)
+        ? parsed.selectedOptions
+        : [],
+      slotSelections: Array.isArray(parsed.slotSelections)
+        ? parsed.slotSelections
+        : [],
+      fixedItems: Array.isArray(parsed.fixedItems) ? parsed.fixedItems : [],
+    }
+  } catch {
+    return {}
+  }
+}
+
+export function orderLineHasDetails(
+  options: OrderLineOptionsPayload,
+  note?: string | null
+) {
+  return (
+    (options.fixedItems?.length ?? 0) > 0 ||
+    (options.slotSelections?.length ?? 0) > 0 ||
+    (options.selectedOptions?.length ?? 0) > 0 ||
+    Boolean(note?.trim())
+  )
 }
 
 export function lineUnitPrice(
