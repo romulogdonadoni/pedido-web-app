@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Search, X } from "lucide-react"
 
-import { ItemDetailDialog } from "@/components/store/item-detail-dialog"
+import { ItemDetailOverlay } from "@/components/store/item-detail-overlay"
 import { ItemRow } from "@/components/store/item-row"
 import { Input } from "@/components/ui/input"
 import {
@@ -60,7 +60,7 @@ export function SearchPage({ menu }: { menu: StoreMenu }) {
         )}
       </div>
 
-      <ItemDetailDialog
+      <ItemDetailOverlay
         menu={menu}
         item={selectedItem}
         open={selectedItem != null}

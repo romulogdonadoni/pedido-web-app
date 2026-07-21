@@ -2,7 +2,6 @@ import { BottomNav } from "@/components/store/bottom-nav"
 import { DesktopNav } from "@/components/store/desktop-nav"
 import { OfflineBar } from "@/components/store/offline-bar"
 import { StoreProviders } from "@/components/store/store-providers"
-import { TenantGate } from "@/components/store/tenant-gate"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { resolveStore } from "@/lib/store/resolve"
 
@@ -13,9 +12,7 @@ export default async function StoreLayout({
 }) {
   const store = await resolveStore()
 
-  if (!store) {
-    return <TenantGate />
-  }
+  if (!store) return
 
   return (
     <StoreProviders tenant={store.tenant} menu={store.menu}>

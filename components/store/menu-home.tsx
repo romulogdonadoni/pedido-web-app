@@ -4,7 +4,7 @@ import * as React from "react"
 
 import { CartTriggerButton } from "@/components/cart/cart-trigger-button"
 import { CategoryNav, slugify } from "@/components/store/category-nav"
-import { ItemDetailDialog } from "@/components/store/item-detail-dialog"
+import { ItemDetailOverlay } from "@/components/store/item-detail-overlay"
 import { ItemRow } from "@/components/store/item-row"
 import { StoreHeader } from "@/components/store/store-header"
 import { useCart } from "@/lib/cart/cart-context"
@@ -71,7 +71,7 @@ export function MenuHome({ menu }: { menu: StoreMenu }) {
         ) : null}
       </div>
 
-      <ItemDetailDialog
+      <ItemDetailOverlay
         menu={menu}
         item={selectedItem}
         open={selectedItem != null}

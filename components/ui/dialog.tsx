@@ -80,13 +80,12 @@ function DialogContent({
                 variant="ghost"
                 className="absolute top-4 right-4 bg-secondary"
                 size="icon-sm"
-              />
+              >
+                <XIcon className="size-4" />
+                <span className="sr-only">Close</span>
+              </Button>
             }
-          >
-            <XIcon
-            />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
+          />
         )}
       </DialogPrimitive.Popup>
     </DialogPortal>
