@@ -1,10 +1,4 @@
-function getApiBaseUrl() {
-  return (
-    process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-    process.env.API_URL?.replace(/\/$/, "") ||
-    "http://localhost:5247"
-  )
-}
+import { getApiBaseUrl, withApiHeaders } from "@/lib/api/base-url"
 
 export type StoreDirectoryItem = {
   identifier: string
@@ -69,6 +63,7 @@ export async function fetchStores(
   const url = `${getApiBaseUrl()}/stores${qs.size ? `?${qs}` : ""}`
   const response = await fetch(url, {
     method: "GET",
+    headers: withApiHeaders(),
     cache: "no-store",
   })
 

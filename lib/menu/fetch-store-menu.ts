@@ -1,5 +1,6 @@
 import { cache } from "react"
 
+import { getApiBaseUrl, withApiHeaders } from "@/lib/api/base-url"
 import type {
     MenuItem,
     OptionGroup,
@@ -14,14 +15,6 @@ import type {
     StoreMenuEntry,
     StoreMenuGroup,
 } from "@/lib/menu/catalog"
-
-function getApiBaseUrl() {
-  return (
-    process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-    process.env.API_URL?.replace(/\/$/, "") ||
-    "http://localhost:5247"
-  )
-}
 
 type ApiOptionGroup = {
   id: string
@@ -310,17 +303,13 @@ export const fetchStoreMenu = cache(
     if (!id) return null
 
     const baseUrl = getApiBaseUrl()
-    const headers: HeadersInit = {}
-    if (/ngrok/i.test(baseUrl)) {
-      headers["ngrok-skip-browser-warning"] = "true"
-    }
 
     try {
       const response = await fetch(
         `${baseUrl}/store/${encodeURIComponent(id)}/menu`,
         {
           method: "GET",
-          headers,
+          headers: withApiHeaders(),
           next: { revalidate: 30 },
         }
       )
