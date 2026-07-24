@@ -23,6 +23,7 @@ import {
 import { parseHighlightKind } from "@/lib/menu/highlights"
 import { itemNeedsCustomization } from "@/lib/menu/options"
 import { resolveMenuSectionIcon } from "@/lib/menu/section-icons"
+import { scrollToElement } from "@/lib/dom/scroll-to-element"
 import { useStoreNav } from "@/lib/store/nav-context"
 
 type SectionLayout = "List" | "Carousel" | "Featured"
@@ -115,13 +116,16 @@ export function MenuHome({ menu }: { menu: StoreMenu }) {
 
   function scrollToFeatured() {
     if (!firstFeaturedId) return
-    document
-      .getElementById(
-        `cat-${slugify(
-          sections.find((s) => s.id === firstFeaturedId)?.category ?? ""
-        )}`
-      )
-      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+    const el = document.getElementById(
+      `cat-${slugify(
+        sections.find((s) => s.id === firstFeaturedId)?.category ?? ""
+      )}`
+    )
+    if (!el) return
+    const stickyNav = document.querySelector<HTMLElement>(
+      "[data-slot='category-nav']"
+    )
+    scrollToElement(el, { offset: stickyNav?.offsetHeight ?? 64 })
   }
 
   function handleSelect(item: MenuItem) {
