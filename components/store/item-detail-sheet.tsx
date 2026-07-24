@@ -4,8 +4,8 @@ import { Minus, Plus, XIcon } from "lucide-react"
 import Image from "next/image"
 import * as React from "react"
 
-import { ItemOptionsSections } from "@/components/store/item-options-sections"
 import { ItemHighlightSeal } from "@/components/store/item-highlight-seal"
+import { ItemOptionsSections } from "@/components/store/item-options-sections"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -250,7 +250,7 @@ export function ItemDetailSheet({
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <ScrollArea className="flex flex-col min-h-0 grow">
+              <ScrollArea className="flex flex-col min-h-0 grow pr-2">
                 <div className="h-full px-4 pt-4 pb-2">
                   <SheetHeader className="gap-2 p-0 pr-10 text-left">
                     <SheetTitle className="text-xl leading-snug font-semibold tracking-tight">
