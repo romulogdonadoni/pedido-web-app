@@ -11,6 +11,7 @@ import {
   type MenuItem,
   type StoreMenu,
 } from "@/lib/menu/catalog"
+import { itemNeedsCustomization } from "@/lib/menu/options"
 
 export function SearchPage({ menu }: { menu: StoreMenu }) {
   const [query, setQuery] = React.useState("")
@@ -19,6 +20,10 @@ export function SearchPage({ menu }: { menu: StoreMenu }) {
     () => searchMenuItems(menu, query),
     [menu, query]
   )
+
+  function handleSelect(item: MenuItem) {
+    if (itemNeedsCustomization(item)) setSelectedItem(item)
+  }
 
   return (
     <div className="px-4 py-4 pb-8 lg:px-6 lg:py-6">
@@ -55,7 +60,12 @@ export function SearchPage({ menu }: { menu: StoreMenu }) {
           </p>
         ) : (
           results.map((item) => (
-            <ItemRow key={item.id} item={item} onSelect={setSelectedItem} />
+            <ItemRow
+              key={item.id}
+              item={item}
+              storeOpen={menu.isOpen}
+              onSelect={handleSelect}
+            />
           ))
         )}
       </div>

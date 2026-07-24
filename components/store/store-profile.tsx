@@ -1,4 +1,6 @@
-import { ArrowLeft, MapPin, Share2 } from "lucide-react"
+"use client"
+
+import { ArrowLeft, CreditCard, MapPin, Share2, Banknote } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -7,15 +9,69 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { formatBrl, type StoreMenu } from "@/lib/menu/catalog"
+import { useStoreNav } from "@/lib/store/nav-context"
+import { STORE_HOME_PATH } from "@/lib/tenant/host"
+import { cn } from "@/lib/utils"
+
+const WEEKDAY_ALIASES: Record<number, string[]> = {
+  0: ["domingo"],
+  1: ["segunda"],
+  2: ["terca", "terça"],
+  3: ["quarta"],
+  4: ["quinta"],
+  5: ["sexta"],
+  6: ["sabado", "sábado"],
+}
+
+function normalizeDay(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+}
+
+function isTodayLabel(day: string) {
+  const aliases = WEEKDAY_ALIASES[new Date().getDay()] ?? []
+  const d = normalizeDay(day)
+  return aliases.some((a) => d.includes(normalizeDay(a)))
+}
+
+function brandIconLabel(brand: string) {
+  const key = brand.trim().toLowerCase()
+  if (key.includes("pix")) return "PIX"
+  if (key.includes("visa")) return "Visa"
+  if (key.includes("master")) return "Master"
+  if (key.includes("elo")) return "Elo"
+  if (key.includes("amex") || key.includes("american")) return "Amex"
+  if (key.includes("hiper")) return "Hiper"
+  return brand
+}
 
 export function StoreProfile({ menu }: { menu: StoreMenu }) {
+  const { href } = useStoreNav()
   const online = menu.payments.filter((p) => p.kind === "online")
   const delivery = menu.payments.filter((p) => p.kind === "delivery")
+  const gallery = menu.galleryUrls ?? []
+  const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()
+  const hasCoords = menu.address.lat != null && menu.address.lng != null
+  const mapsEmbed =
+    hasCoords && mapsKey
+      ? `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(mapsKey)}&q=${menu.address.lat},${menu.address.lng}&zoom=15`
+      : null
+  const mapsLink = hasCoords
+    ? `https://www.google.com/maps/search/?api=1&query=${menu.address.lat},${menu.address.lng}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        `${menu.address.line}, ${menu.address.city} - ${menu.address.state}`
+      )}`
 
   return (
     <div className="pb-8 lg:pb-6">
       <div className="flex items-center gap-2 border-b px-2 py-2 lg:border-b-0 lg:px-6 lg:pt-6 lg:pb-2">
-        <Button variant="ghost" size="icon-sm" render={<Link href="/" />}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          render={<Link href={href(STORE_HOME_PATH)} />}
+        >
           <ArrowLeft className="size-4" />
         </Button>
         <h1 className="flex-1 text-sm font-medium lg:text-xl lg:font-semibold">
@@ -56,11 +112,11 @@ export function StoreProfile({ menu }: { menu: StoreMenu }) {
             </div>
 
             <div className="flex items-start gap-3">
-              <Avatar className="size-14 border lg:size-16">
+              <Avatar className="size-14 shrink-0 rounded-full border lg:size-16">
                 {menu.logo ? (
                   <AvatarImage src={menu.logo} alt={menu.name} />
                 ) : null}
-                <AvatarFallback className="text-sm font-semibold">
+                <AvatarFallback className="rounded-full text-sm font-semibold">
                   {menu.name
                     .split(" ")
                     .slice(0, 2)
@@ -93,17 +149,60 @@ export function StoreProfile({ menu }: { menu: StoreMenu }) {
             </p>
           </div>
 
+          {gallery.length > 0 ? (
+            <>
+              <SectionTitle>Galeria</SectionTitle>
+              <div className="flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] lg:px-0 [&::-webkit-scrollbar]:hidden">
+                {gallery.map((url) => (
+                  <div
+                    key={url}
+                    className="relative size-28 shrink-0 overflow-hidden rounded-2xl bg-muted sm:size-32"
+                  >
+                    <Image
+                      src={url}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="128px"
+                      unoptimized
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
+
           <SectionTitle>Horário de atendimento</SectionTitle>
           <ul className="px-4 lg:rounded-2xl lg:border lg:px-4">
-            {menu.hours.map((h) => (
-              <li
-                key={h.day}
-                className="flex justify-between gap-4 border-b border-border/60 py-3 text-sm last:border-b-0"
-              >
-                <span>{h.day}</span>
-                <span className="text-muted-foreground">{h.hours}</span>
-              </li>
-            ))}
+            {menu.hours.map((h) => {
+              const today = isTodayLabel(h.day)
+              return (
+                <li
+                  key={h.day}
+                  className={cn(
+                    "flex justify-between gap-4 border-b border-border/60 py-3 text-sm last:border-b-0",
+                    today && "rounded-xl bg-primary/8 px-2 lg:px-3"
+                  )}
+                >
+                  <span className={cn(today && "font-semibold text-primary")}>
+                    {h.day}
+                    {today ? (
+                      <span className="ml-2 text-[10px] font-semibold tracking-wide uppercase">
+                        Hoje
+                      </span>
+                    ) : null}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-muted-foreground",
+                      today && "font-medium text-foreground"
+                    )}
+                  >
+                    {h.hours}
+                  </span>
+                </li>
+              )
+            })}
           </ul>
         </div>
 
@@ -123,9 +222,24 @@ export function StoreProfile({ menu }: { menu: StoreMenu }) {
                 {menu.address.zip}
               </p>
             </div>
-            <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed bg-muted/50 text-sm text-muted-foreground lg:h-56">
-              Mapa (placeholder)
-            </div>
+            {mapsEmbed ? (
+              <iframe
+                title="Mapa da loja"
+                src={mapsEmbed}
+                className="h-48 w-full rounded-2xl border lg:h-56"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            ) : (
+              <a
+                href={mapsLink}
+                target="_blank"
+                rel="noreferrer"
+                className="flex h-48 items-center justify-center rounded-2xl border border-dashed bg-muted/50 text-sm text-primary underline-offset-4 hover:underline lg:h-56"
+              >
+                Abrir no Google Maps
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -158,22 +272,45 @@ function PaymentList({
         {methods.map((method) => (
           <li key={method.id}>
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium">{method.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {method.kind === "online"
-                    ? "Pagamento online"
-                    : "Pagamento na entrega"}
-                </p>
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                  {method.id.includes("cash") ||
+                  method.name.toLowerCase().includes("dinheiro") ? (
+                    <Banknote className="size-4" />
+                  ) : (
+                    <CreditCard className="size-4" />
+                  )}
+                </span>
+                <div>
+                  <p className="text-sm font-medium">{method.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {method.kind === "online"
+                      ? "Pagamento online"
+                      : "Pagamento na entrega"}
+                  </p>
+                </div>
               </div>
             </div>
             {method.brands?.length ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="mt-2 flex flex-wrap gap-1.5 pl-11">
                 {method.brands.map((brand) => (
-                  <Badge key={brand} variant="outline">
-                    {brand}
+                  <Badge
+                    key={brand}
+                    variant="outline"
+                    className="rounded-md px-2 font-semibold tracking-wide"
+                  >
+                    {brandIconLabel(brand)}
                   </Badge>
                 ))}
+              </div>
+            ) : method.id === "pix" ? (
+              <div className="mt-2 flex flex-wrap gap-1.5 pl-11">
+                <Badge
+                  variant="outline"
+                  className="rounded-md px-2 font-semibold tracking-wide"
+                >
+                  PIX
+                </Badge>
               </div>
             ) : null}
             <Separator className="mt-3" />

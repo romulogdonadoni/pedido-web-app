@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { toast } from "sonner"
 
+import { playAddToCartSound } from "@/lib/cart/add-to-cart-sound"
 import {
   cartQty,
   cartSubtotal,
@@ -97,7 +99,14 @@ export function CartProvider({
         const existing = prev.find((line) => line.key === key)
         if (existing) {
           return prev.map((line) =>
-            line.key === key ? { ...line, qty: line.qty + addQty } : line
+            line.key === key
+              ? {
+                  ...line,
+                  qty: line.qty + addQty,
+                  // Backfill photo if the line was saved before images existed.
+                  image: line.image || input.image,
+                }
+              : line
           )
         }
         return [
@@ -118,6 +127,11 @@ export function CartProvider({
           },
         ]
       })
+
+      toast.success("Adicionado à sacola", {
+        description: input.name,
+      })
+      playAddToCartSound()
     },
     []
   )

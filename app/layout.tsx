@@ -2,6 +2,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import type { Metadata } from "next"
 
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
 import "./globals.css"
@@ -18,10 +19,10 @@ const fontMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Cardápio digital",
+    default: "Pedido",
     template: "%s · Pedido",
   },
-  description: "Cardápio digital e pedidos WhiteLabel",
+  description: "Encontre lojas perto de você e peça pelo cardápio digital",
 }
 
 export default function RootLayout({
@@ -36,7 +37,10 @@ export default function RootLayout({
       className={cn("font-sans antialiased", fontSans.variable, fontMono.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <Toaster position="top-center" richColors closeButton />
+        </ThemeProvider>
       </body>
     </html>
   )

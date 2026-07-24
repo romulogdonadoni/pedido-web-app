@@ -29,7 +29,7 @@ export function CategoryNav({
         ([entry]) => {
           if (entry?.isIntersecting) setActive(cat)
         },
-        { rootMargin: "-30% 0px -60% 0px", threshold: 0 }
+        { rootMargin: "-28% 0px -55% 0px", threshold: 0 }
       )
       obs.observe(el)
       observers.push(obs)
@@ -37,23 +37,28 @@ export function CategoryNav({
     return () => observers.forEach((o) => o.disconnect())
   }, [categories])
 
+  if (categories.length === 0) return null
+
   return (
-    <div className="sticky top-0 border-b bg-background/95 px-4 py-3 backdrop-blur lg:px-0">
-      <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {categories.map((cat) => (
-          <Button
-            key={cat}
-            size="sm"
-            variant={active === cat ? "default" : "secondary"}
-            className={cn(
-              "shrink-0 rounded-full",
-              active === cat && "shadow-sm"
-            )}
-            onClick={() => scrollTo(cat)}
-          >
-            {cat}
-          </Button>
-        ))}
+    <div className="sticky top-0 z-20 border-b border-border/60 bg-background/90 py-3 backdrop-blur-md">
+      <div className="flex gap-2 overflow-x-auto px-4 [-ms-overflow-style:none] [scrollbar-width:none] lg:px-6 [&::-webkit-scrollbar]:hidden">
+        {categories.map((cat) => {
+          const isActive = active === cat
+          return (
+            <Button
+              key={cat}
+              size="sm"
+              variant={isActive ? "default" : "outline"}
+              className={cn(
+                "h-9 shrink-0 rounded-full px-4 text-xs font-semibold tracking-wide uppercase",
+                !isActive && "border-border/70 bg-transparent text-muted-foreground"
+              )}
+              onClick={() => scrollTo(cat)}
+            >
+              {cat}
+            </Button>
+          )
+        })}
       </div>
     </div>
   )

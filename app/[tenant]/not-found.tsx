@@ -1,9 +1,18 @@
+"use client"
+
 import Link from "next/link"
 import { Search, UtensilsCrossed } from "lucide-react"
+import { useParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 
 export default function NotFound() {
+  const params = useParams()
+  const tenant =
+    typeof params.tenant === "string" ? params.tenant.toLowerCase() : null
+  const homeHref = tenant ? `/${tenant}` : "/"
+  const searchHref = tenant ? `/${tenant}/busca` : "/"
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 py-16 text-center">
       <div className="flex size-16 items-center justify-center rounded-2xl bg-muted">
@@ -24,13 +33,13 @@ export default function NotFound() {
       </div>
 
       <div className="flex w-full max-w-xs flex-col gap-2 sm:max-w-none sm:flex-row sm:justify-center">
-        <Button size="lg" render={<Link href="/" />}>
+        <Button size="lg" render={<Link href={homeHref} />}>
           Voltar ao cardápio
         </Button>
         <Button
           size="lg"
           variant="outline"
-          render={<Link href="/busca" />}
+          render={<Link href={searchHref} />}
         >
           <Search className="size-4" />
           Buscar itens

@@ -5,6 +5,7 @@ import Image from "next/image"
 import * as React from "react"
 
 import { ItemOptionsSections } from "@/components/store/item-options-sections"
+import { ItemHighlightSeal } from "@/components/store/item-highlight-seal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,14 +29,12 @@ import {
   type StoreMenu,
 } from "@/lib/menu/catalog"
 import {
+  findItemCustomizationIssue,
   pruneOptionsForSlotSelections,
   toggleOptionSelection,
   toggleSlotSelection,
-  validateOptionGroups,
-  validateProductGroupOptions,
-  validateProductGroupSlotOptions,
-  validateProductGroupSlots,
 } from "@/lib/menu/options"
+import { cn } from "@/lib/utils"
 import { Label } from "../ui/label"
 
 export function ItemDetailDialog({
@@ -58,6 +57,7 @@ export function ItemDetailDialog({
   const [note, setNote] = React.useState("")
   const [qty, setQty] = React.useState(1)
   const [error, setError] = React.useState<string | null>(null)
+  const [errorFocusId, setErrorFocusId] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     if (item) setDisplayItem(item)
@@ -68,10 +68,21 @@ export function ItemDetailDialog({
     setNote("")
     setQty(1)
     setError(null)
+    setErrorFocusId(null)
     setSlotSelections(
       defaultSlotSelections(displayItem?.productGroupSlots)
     )
   }, [displayItem?.id])
+
+  React.useEffect(() => {
+    if (!errorFocusId) return
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById(errorFocusId)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [errorFocusId, error])
 
   const discount = displayItem
     ? discountPercent(displayItem.price, displayItem.compareAtPrice)
@@ -82,12 +93,16 @@ export function ItemDetailDialog({
     slotSelections
   )
   const unit = (displayItem?.price ?? 0) + optionExtras + slotExtras
-  const groups = displayItem?.optionGroups ?? []
   const isProductGroup = displayItem?.kind === "productGroup"
   const noteId = `dialog-item-note-${displayItem?.id ?? "closed"}`
 
+  function clearCustomizationError() {
+    setError(null)
+    setErrorFocusId(null)
+  }
+
   function findOptionGroups(productId?: string) {
-    if (!displayItem || !productId) return groups
+    if (!displayItem || !productId) return displayItem?.optionGroups ?? []
     const fixed = displayItem.productGroupItems?.find(
       (p) => p.productId === productId
     )
@@ -106,7 +121,7 @@ export function ItemDetailDialog({
     namePrefix?: string
   ) {
     if (!displayItem) return
-    setError(null)
+    clearCustomizationError()
     const targetGroups = findOptionGroups(productId)
     setSelected((prev) =>
       toggleOptionSelection(
@@ -122,7 +137,7 @@ export function ItemDetailDialog({
 
   function onSlotToggle(slotId: string, productId: string) {
     if (!displayItem) return
-    setError(null)
+    clearCustomizationError()
     const slots = displayItem.productGroupSlots ?? []
     const nextSlots = toggleSlotSelection(
       slots,
@@ -143,41 +158,19 @@ export function ItemDetailDialog({
     if (!displayItem) return
     if (!menu.isOpen) {
       setError("A loja está offline no momento.")
+      setErrorFocusId(null)
       return
     }
 
-    if (isProductGroup) {
-      const slotErr = validateProductGroupSlots(
-        displayItem.productGroupSlots,
-        slotSelections
-      )
-      if (slotErr) {
-        setError(slotErr)
-        return
-      }
-      const itemsErr = validateProductGroupOptions(
-        displayItem.productGroupItems,
-        selected
-      )
-      if (itemsErr) {
-        setError(itemsErr)
-        return
-      }
-      const slotOptErr = validateProductGroupSlotOptions(
-        displayItem.productGroupSlots,
-        slotSelections,
-        selected
-      )
-      if (slotOptErr) {
-        setError(slotOptErr)
-        return
-      }
-    } else {
-      const validation = validateOptionGroups(groups, selected)
-      if (validation) {
-        setError(validation)
-        return
-      }
+    const issue = findItemCustomizationIssue(
+      displayItem,
+      selected,
+      slotSelections
+    )
+    if (issue) {
+      setError(issue.message)
+      setErrorFocusId(issue.focusId)
+      return
     }
 
     addItem({
@@ -244,7 +237,14 @@ export function ItemDetailDialog({
                     {displayItem.name[0]}
                   </div>
                 )}
-                {displayItem.badge ? (
+                {displayItem.highlightKind &&
+                displayItem.highlightKind.toLowerCase() !== "none" ? (
+                  <div className="absolute top-2.5 left-2.5">
+                    <ItemHighlightSeal
+                      highlightKind={displayItem.highlightKind}
+                    />
+                  </div>
+                ) : displayItem.badge ? (
                   <span className="absolute top-2.5 left-2.5 rounded-full bg-background px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm">
                     {displayItem.badge}
                   </span>
@@ -292,6 +292,7 @@ export function ItemDetailDialog({
                   onToggle={onToggle}
                   slotSelections={slotSelections}
                   onSlotToggle={onSlotToggle}
+                  errorFocusId={errorFocusId}
                 />
 
                 <div className="space-y-2">
@@ -307,16 +308,18 @@ export function ItemDetailDialog({
                     className="resize-none rounded-xl"
                   />
                 </div>
-
-                {error ? (
-                  <p className="text-sm text-destructive" role="alert">
-                    {error}
-                  </p>
-                ) : null}
               </div>
             </ScrollArea>
 
             <div className="shrink-0 border-t border-border/60 bg-popover/95 px-5 py-4 backdrop-blur">
+              {error ? (
+                <p
+                  className="mb-2 text-sm font-medium text-destructive"
+                  role="alert"
+                >
+                  {error}
+                </p>
+              ) : null}
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-0.5 rounded-full border border-border/80 bg-background p-1">
                   <Button
@@ -346,7 +349,10 @@ export function ItemDetailDialog({
                 <Button
                   type="button"
                   size="lg"
-                  className="h-11 flex-1 rounded-full text-base font-semibold"
+                  className={cn(
+                    "h-11 flex-1 rounded-full text-base font-semibold",
+                    error && "ring-2 ring-destructive/40"
+                  )}
                   disabled={!menu.isOpen}
                   onClick={onAdd}
                 >

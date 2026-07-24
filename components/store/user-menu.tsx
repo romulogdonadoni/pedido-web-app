@@ -13,8 +13,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useStoreNav } from "@/lib/store/nav-context"
 
 export function UserMenu() {
+  const { href } = useStoreNav()
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -46,14 +49,14 @@ export function UserMenu() {
 
         <DropdownMenuGroup>
           <DropdownMenuItem
-            render={<Link href="/pedidos" />}
+            render={<Link href={href("/pedidos")} />}
             className="cursor-pointer"
           >
             <ClipboardList />
             Meus pedidos
           </DropdownMenuItem>
           <DropdownMenuItem
-            render={<Link href="/perfil" />}
+            render={<Link href={href("/perfil")} />}
             className="cursor-pointer"
           >
             <Store />

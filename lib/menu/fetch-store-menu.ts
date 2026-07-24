@@ -1,16 +1,18 @@
+import { cache } from "react"
+
 import type {
-  MenuItem,
-  OptionGroup,
-  ProductGroup,
-  ProductGroupItem,
-  ProductGroupSlot,
-  ProductGroupSlotProduct,
-  StoreAddress,
-  StoreHour,
-  StoreMenu,
-  StoreMenuEntry,
-  StoreMenuGroup,
-  PaymentMethod,
+    MenuItem,
+    OptionGroup,
+    PaymentMethod,
+    ProductGroup,
+    ProductGroupItem,
+    ProductGroupSlot,
+    ProductGroupSlotProduct,
+    StoreAddress,
+    StoreHour,
+    StoreMenu,
+    StoreMenuEntry,
+    StoreMenuGroup,
 } from "@/lib/menu/catalog"
 
 function getApiBaseUrl() {
@@ -44,6 +46,7 @@ type ApiStoreMenuItem = {
   image?: string | null
   badge?: string | null
   popular: boolean
+  highlightKind?: string | null
   optionGroups?: ApiOptionGroup[] | null
 }
 
@@ -88,6 +91,10 @@ type ApiStoreMenu = {
   bannerTitle?: string | null
   bannerSubtitle?: string | null
   bannerUrl?: string | null
+  brandColor?: string | null
+  brandForegroundColor?: string | null
+  brandFont?: string | null
+  galleryUrls?: string[] | null
   isOpen: boolean
   minOrder: number
   hours: StoreHour[]
@@ -110,6 +117,8 @@ type ApiStoreMenu = {
   groups?: Array<{
     id: string
     name: string
+    layoutType?: string | null
+    icon?: string | null
     items?: Array<{
       id: string
       type: string
@@ -153,6 +162,7 @@ function mapStoreMenuItem(item: ApiStoreMenuItem): MenuItem {
     image: item.image ?? undefined,
     badge: item.badge ?? undefined,
     popular: item.popular,
+    highlightKind: item.highlightKind ?? undefined,
     kind: "product",
     optionGroups: mapOptionGroups(item.optionGroups),
   }
@@ -248,6 +258,8 @@ function mapMenu(data: ApiStoreMenu): StoreMenu {
     return {
       id: group.id,
       name: group.name,
+      layoutType: group.layoutType || "List",
+      icon: group.icon ?? null,
       items,
     }
   })
@@ -271,6 +283,12 @@ function mapMenu(data: ApiStoreMenu): StoreMenu {
     bannerTitle: data.bannerTitle ?? undefined,
     bannerSubtitle: data.bannerSubtitle ?? undefined,
     bannerUrl: data.bannerUrl ?? undefined,
+    brandColor: data.brandColor ?? undefined,
+    brandForegroundColor: data.brandForegroundColor ?? undefined,
+    brandFont: data.brandFont ?? undefined,
+    galleryUrls: Array.isArray(data.galleryUrls)
+      ? data.galleryUrls.filter((u): u is string => typeof u === "string" && !!u.trim())
+      : undefined,
     isOpen: data.isOpen,
     minOrder: Number(data.minOrder) || 0,
     hours: data.hours ?? [],
@@ -286,40 +304,40 @@ function mapMenu(data: ApiStoreMenu): StoreMenu {
 }
 
 /** Fetches the public store menu. Returns null on 404 / network failure. */
-export async function fetchStoreMenu(
-  tenant: string
-): Promise<StoreMenu | null> {
-  const id = tenant.trim().toLowerCase()
-  if (!id) return null
+export const fetchStoreMenu = cache(
+  async (tenant: string): Promise<StoreMenu | null> => {
+    const id = tenant.trim().toLowerCase()
+    if (!id) return null
 
-  const baseUrl = getApiBaseUrl()
-  const headers: HeadersInit = {}
-  if (/ngrok/i.test(baseUrl)) {
-    headers["ngrok-skip-browser-warning"] = "true"
-  }
-
-  try {
-    const response = await fetch(
-      `${baseUrl}/store/${encodeURIComponent(id)}/menu`,
-      {
-        method: "GET",
-        headers,
-        next: { revalidate: 30 },
-      }
-    )
-
-    if (response.status === 404) return null
-    if (!response.ok) {
-      console.error(
-        `[store-menu] ${response.status} for tenant ${id}: ${response.statusText}`
-      )
-      return null
+    const baseUrl = getApiBaseUrl()
+    const headers: HeadersInit = {}
+    if (/ngrok/i.test(baseUrl)) {
+      headers["ngrok-skip-browser-warning"] = "true"
     }
 
-    const data = (await response.json()) as ApiStoreMenu
-    return mapMenu(data)
-  } catch (err) {
-    console.error(`[store-menu] failed for tenant ${id}`, err)
-    return null
+    try {
+      const response = await fetch(
+        `${baseUrl}/store/${encodeURIComponent(id)}/menu`,
+        {
+          method: "GET",
+          headers,
+          next: { revalidate: 30 },
+        }
+      )
+
+      if (response.status === 404) return null
+      if (!response.ok) {
+        console.error(
+          `[store-menu] ${response.status} for tenant ${id}: ${response.statusText}`
+        )
+        return null
+      }
+
+      const data = (await response.json()) as ApiStoreMenu
+      return mapMenu(data)
+    } catch (err) {
+      console.error(`[store-menu] failed for tenant ${id}`, err)
+      return null
+    }
   }
-}
+)

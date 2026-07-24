@@ -20,6 +20,8 @@ import {
 import { formatBrl } from "@/lib/menu/catalog"
 import { useOrders } from "@/lib/orders/orders-context"
 import { getStoreOrder } from "@/lib/orders/store-api"
+import { useStoreNav } from "@/lib/store/nav-context"
+import { STORE_HOME_PATH } from "@/lib/tenant/host"
 import {
   GUID_RE,
   mapApiStatus,
@@ -51,6 +53,7 @@ function summaryToListed(row: CustomerOrderSummary): ListedOrder {
 }
 
 export function OrdersList() {
+  const { href } = useStoreNav()
   const { hydrated, tenant, patchOrder } = useOrders()
   const [gate, setGate] = React.useState<GateState>("loading")
   const [session, setSession] = React.useState<CustomerSession | null>(null)
@@ -235,13 +238,15 @@ export function OrdersList() {
             <p className="text-sm text-muted-foreground">
               Você ainda não fez pedidos nesta loja com este número.
             </p>
-            <Button render={<Link href="/" />}>Ir ao cardápio</Button>
+            <Button render={<Link href={href(STORE_HOME_PATH)} />}>
+              Ir ao cardápio
+            </Button>
           </div>
         ) : (
           listed.map((order) => (
             <Link
               key={order.id}
-              href={`/pedido/${order.id}`}
+              href={href(`/pedido/${order.id}`)}
               className="flex items-center gap-3 rounded-2xl border px-4 py-3 transition-colors hover:bg-muted/40"
             >
               <div className="min-w-0 flex-1">

@@ -5,6 +5,7 @@ import Image from "next/image"
 import * as React from "react"
 
 import { ItemOptionsSections } from "@/components/store/item-options-sections"
+import { ItemHighlightSeal } from "@/components/store/item-highlight-seal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -28,13 +29,10 @@ import {
   type StoreMenu,
 } from "@/lib/menu/catalog"
 import {
+  findItemCustomizationIssue,
   pruneOptionsForSlotSelections,
   toggleOptionSelection,
   toggleSlotSelection,
-  validateOptionGroups,
-  validateProductGroupOptions,
-  validateProductGroupSlotOptions,
-  validateProductGroupSlots,
 } from "@/lib/menu/options"
 import { cn } from "@/lib/utils"
 import { Label } from "../ui/label"
@@ -59,6 +57,7 @@ export function ItemDetailSheet({
   const [note, setNote] = React.useState("")
   const [qty, setQty] = React.useState(1)
   const [error, setError] = React.useState<string | null>(null)
+  const [errorFocusId, setErrorFocusId] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     if (item) setDisplayItem(item)
@@ -69,10 +68,21 @@ export function ItemDetailSheet({
     setNote("")
     setQty(1)
     setError(null)
+    setErrorFocusId(null)
     setSlotSelections(
       defaultSlotSelections(displayItem?.productGroupSlots)
     )
   }, [displayItem?.id])
+
+  React.useEffect(() => {
+    if (!errorFocusId) return
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById(errorFocusId)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [errorFocusId, error])
 
   const discount = displayItem
     ? discountPercent(displayItem.price, displayItem.compareAtPrice)
@@ -83,12 +93,16 @@ export function ItemDetailSheet({
     slotSelections
   )
   const unit = (displayItem?.price ?? 0) + optionExtras + slotExtras
-  const groups = displayItem?.optionGroups ?? []
   const isProductGroup = displayItem?.kind === "productGroup"
   const noteId = `sheet-item-note-${displayItem?.id ?? "closed"}`
 
+  function clearCustomizationError() {
+    setError(null)
+    setErrorFocusId(null)
+  }
+
   function findOptionGroups(productId?: string) {
-    if (!displayItem || !productId) return groups
+    if (!displayItem || !productId) return displayItem?.optionGroups ?? []
     const fixed = displayItem.productGroupItems?.find(
       (p) => p.productId === productId
     )
@@ -107,7 +121,7 @@ export function ItemDetailSheet({
     namePrefix?: string
   ) {
     if (!displayItem) return
-    setError(null)
+    clearCustomizationError()
     const targetGroups = findOptionGroups(productId)
     setSelected((prev) =>
       toggleOptionSelection(
@@ -123,7 +137,7 @@ export function ItemDetailSheet({
 
   function onSlotToggle(slotId: string, productId: string) {
     if (!displayItem) return
-    setError(null)
+    clearCustomizationError()
     const slots = displayItem.productGroupSlots ?? []
     const nextSlots = toggleSlotSelection(
       slots,
@@ -144,41 +158,19 @@ export function ItemDetailSheet({
     if (!displayItem) return
     if (!menu.isOpen) {
       setError("A loja está offline no momento.")
+      setErrorFocusId(null)
       return
     }
 
-    if (isProductGroup) {
-      const slotErr = validateProductGroupSlots(
-        displayItem.productGroupSlots,
-        slotSelections
-      )
-      if (slotErr) {
-        setError(slotErr)
-        return
-      }
-      const itemsErr = validateProductGroupOptions(
-        displayItem.productGroupItems,
-        selected
-      )
-      if (itemsErr) {
-        setError(itemsErr)
-        return
-      }
-      const slotOptErr = validateProductGroupSlotOptions(
-        displayItem.productGroupSlots,
-        slotSelections,
-        selected
-      )
-      if (slotOptErr) {
-        setError(slotOptErr)
-        return
-      }
-    } else {
-      const validation = validateOptionGroups(groups, selected)
-      if (validation) {
-        setError(validation)
-        return
-      }
+    const issue = findItemCustomizationIssue(
+      displayItem,
+      selected,
+      slotSelections
+    )
+    if (issue) {
+      setError(issue.message)
+      setErrorFocusId(issue.focusId)
+      return
     }
 
     addItem({
@@ -213,7 +205,7 @@ export function ItemDetailSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="flex h-[92dvh] max-h-[92dvh] w-full flex-col gap-0 overflow-hidden rounded-t-3xl border-t p-0"
+        className="flex h-[92dvh] min-h-[92dvh] max-h-[92dvh] w-full flex-col gap-0 overflow-hidden rounded-t-3xl border-t p-0"
       >
         <SheetClose
           aria-label="Fechar"
@@ -230,7 +222,7 @@ export function ItemDetailSheet({
 
         {displayItem ? (
           <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-muted">
+            <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
               {displayItem.image ? (
                 <Image
                   src={displayItem.image}
@@ -245,7 +237,12 @@ export function ItemDetailSheet({
                   {displayItem.name[0]}
                 </div>
               )}
-              {displayItem.badge ? (
+              {displayItem.highlightKind &&
+              displayItem.highlightKind.toLowerCase() !== "none" ? (
+                <div className="absolute top-3 left-3">
+                  <ItemHighlightSeal highlightKind={displayItem.highlightKind} />
+                </div>
+              ) : displayItem.badge ? (
                 <span className="absolute top-3 left-3 rounded-lg bg-foreground px-2.5 py-1 text-xs font-semibold text-background shadow-sm">
                   {displayItem.badge}
                 </span>
@@ -253,7 +250,7 @@ export function ItemDetailSheet({
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <ScrollArea className="h-[30dvh] max-h-[30dvh] grow">
+              <ScrollArea className="flex flex-col min-h-0 grow">
                 <div className="h-full px-4 pt-4 pb-2">
                   <SheetHeader className="gap-2 p-0 pr-10 text-left">
                     <SheetTitle className="text-xl leading-snug font-semibold tracking-tight">
@@ -289,6 +286,7 @@ export function ItemDetailSheet({
                       onToggle={onToggle}
                       slotSelections={slotSelections}
                       onSlotToggle={onSlotToggle}
+                      errorFocusId={errorFocusId}
                     />
 
                     <div className="space-y-2">
@@ -304,12 +302,6 @@ export function ItemDetailSheet({
                         className="resize-none any-pointer-coarse:text-base"
                       />
                     </div>
-
-                    {error ? (
-                      <p className="text-sm text-destructive" role="alert">
-                        {error}
-                      </p>
-                    ) : null}
                   </div>
                 </div>
               </ScrollArea>
@@ -320,6 +312,14 @@ export function ItemDetailSheet({
                   "pb-[max(0.75rem,env(safe-area-inset-bottom))]"
                 )}
               >
+                {error ? (
+                  <p
+                    className="mb-2 text-sm font-medium text-destructive"
+                    role="alert"
+                  >
+                    {error}
+                  </p>
+                ) : null}
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-0.5 rounded-full border bg-background p-1">
                     <Button
@@ -349,7 +349,10 @@ export function ItemDetailSheet({
                   <Button
                     type="button"
                     size="lg"
-                    className="h-12 flex-1 rounded-full text-base"
+                    className={cn(
+                      "h-12 flex-1 rounded-full text-base",
+                      error && "ring-2 ring-destructive/40"
+                    )}
                     disabled={!menu.isOpen}
                     onClick={onAdd}
                   >

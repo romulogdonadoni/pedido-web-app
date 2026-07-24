@@ -3,7 +3,7 @@
 import * as React from "react"
 import { usePathname } from "next/navigation"
 
-import { withTenantPrefix } from "@/lib/tenant/host"
+import { STORE_HOME_PATH, withTenantPrefix } from "@/lib/tenant/host"
 
 type StoreNavValue = {
   tenant: string
@@ -17,9 +17,11 @@ const StoreNavContext = React.createContext<StoreNavValue | null>(null)
 
 function stripTenantPath(pathname: string, tenant: string): string {
   const prefix = `/${tenant}`
-  if (pathname === prefix || pathname === `${prefix}/`) return "/"
+  if (pathname === prefix || pathname === `${prefix}/`) return STORE_HOME_PATH
   if (pathname.startsWith(`${prefix}/`)) {
-    return pathname.slice(prefix.length) || "/"
+    const rest = pathname.slice(prefix.length) || STORE_HOME_PATH
+    if (rest === "/loja") return STORE_HOME_PATH
+    return rest
   }
   return pathname
 }

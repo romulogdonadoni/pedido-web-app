@@ -1,5 +1,7 @@
+/** Relative app path for store home; withTenantPrefix maps to `/{tenant}`. */
+export const STORE_HOME_PATH = "/"
+
 export const TENANT_COOKIE = "whitelabel.pedido.tenant"
-export const TENANT_HEADER = "x-tenant-id"
 
 const TENANT_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/
 
@@ -20,6 +22,7 @@ const RESERVED_SEGMENTS = new Set([
   "pedidos",
   "checkout",
   "item",
+  "loja",
   "_next",
 ])
 
@@ -51,26 +54,27 @@ export function resolveTenantFromPath(
   return isValidTenantSlug(segment) ? segment : null
 }
 
-/** Split `/{tenant}/rest` into tenant + remaining pathname (for rewrite). */
-export function splitTenantPath(pathname: string): {
-  tenant: string | null
-  pathname: string
-} {
-  const segments = pathname.split("/").filter(Boolean)
-  const first = segments[0]?.toLowerCase()
-  if (!first || !isValidTenantSlug(first)) {
-    return { tenant: null, pathname: pathname || "/" }
+export function withTenantPrefix(tenant: string, pathname: string): string {
+  if (pathname === "/" || pathname === "" || pathname === "/loja") {
+    return `/${tenant}`
   }
-  const rest = segments.slice(1)
-  return {
-    tenant: first,
-    pathname: rest.length === 0 ? "/" : `/${rest.join("/")}`,
-  }
+  return `/${tenant}${pathname.startsWith("/") ? pathname : `/${pathname}`}`
 }
 
-export function withTenantPrefix(tenant: string, pathname: string): string {
-  if (pathname === "/") return `/${tenant}`
-  return `/${tenant}${pathname.startsWith("/") ? pathname : `/${pathname}`}`
+/** True when the (full or stripped) path is the store menu home. */
+export function isStoreHomePath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false
+  if (pathname === "/" || pathname === "" || pathname === "/loja") return true
+  const segments = pathname.split("/").filter(Boolean)
+  if (segments.length === 1 && isValidTenantSlug(segments[0]!)) return true
+  if (
+    segments.length === 2 &&
+    isValidTenantSlug(segments[0]!) &&
+    segments[1] === "loja"
+  ) {
+    return true
+  }
+  return false
 }
 
 export function readTenantCookie(cookieHeader: string | null): string | null {
@@ -81,18 +85,4 @@ export function readTenantCookie(cookieHeader: string | null): string | null {
   if (!match?.[1]) return null
   const value = decodeURIComponent(match[1]).toLowerCase()
   return isValidTenantSlug(value) ? value : null
-}
-
-export function resolveTenant(input: {
-  pathname?: string | null
-  tenantHeader?: string | null
-  cookieHeader?: string | null
-}): string | null {
-  const fromHeader = input.tenantHeader?.trim().toLowerCase()
-  if (fromHeader && isValidTenantSlug(fromHeader)) return fromHeader
-
-  return (
-    resolveTenantFromPath(input.pathname) ||
-    readTenantCookie(input.cookieHeader ?? null)
-  )
 }

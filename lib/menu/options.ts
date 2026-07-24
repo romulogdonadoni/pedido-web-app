@@ -2,8 +2,24 @@ import type {
   OptionGroup,
   ProductGroupItem,
   ProductGroupSlot,
+  MenuItem,
 } from "@/lib/menu/catalog"
 import type { SelectedOption, SlotSelection } from "@/lib/cart/types"
+
+export type OptionsValidationIssue = {
+  message: string
+  focusId: string
+}
+
+export function optionGroupFocusId(groupId: string, productId?: string) {
+  return productId
+    ? `opt-group-${productId}-${groupId}`
+    : `opt-group-${groupId}`
+}
+
+export function slotFocusId(slotId: string) {
+  return `opt-slot-${slotId}`
+}
 
 export function countSelectedInGroup(
   selected: SelectedOption[],
@@ -21,15 +37,21 @@ export function validateOptionGroups(
   groups: OptionGroup[] | undefined,
   selected: SelectedOption[],
   productId?: string
-): string | null {
+): OptionsValidationIssue | null {
   if (!groups?.length) return null
   for (const group of groups) {
     const count = countSelectedInGroup(selected, group.id, productId)
     if (count < group.min) {
-      return `Selecione pelo menos ${group.min} em “${group.title}”.`
+      return {
+        message: `Selecione pelo menos ${group.min} em “${group.title}”.`,
+        focusId: optionGroupFocusId(group.id, productId),
+      }
     }
     if (count > group.max) {
-      return `Selecione no máximo ${group.max} em “${group.title}”.`
+      return {
+        message: `Selecione no máximo ${group.max} em “${group.title}”.`,
+        focusId: optionGroupFocusId(group.id, productId),
+      }
     }
   }
   return null
@@ -39,7 +61,7 @@ export function validateOptionGroups(
 export function validateProductGroupOptions(
   items: ProductGroupItem[] | undefined,
   selected: SelectedOption[]
-): string | null {
+): OptionsValidationIssue | null {
   if (!items?.length) return null
   for (const item of items) {
     const err = validateOptionGroups(
@@ -47,7 +69,12 @@ export function validateProductGroupOptions(
       selected,
       item.productId
     )
-    if (err) return `${item.name}: ${err}`
+    if (err) {
+      return {
+        message: `${item.name}: ${err.message}`,
+        focusId: err.focusId,
+      }
+    }
   }
   return null
 }
@@ -55,16 +82,22 @@ export function validateProductGroupOptions(
 export function validateProductGroupSlots(
   slots: ProductGroupSlot[] | undefined,
   selections: SlotSelection[] | undefined
-): string | null {
+): OptionsValidationIssue | null {
   if (!slots?.length) return null
   const sels = selections ?? []
   for (const slot of slots) {
     const count = sels.filter((s) => s.slotId === slot.id).length
     if (count < slot.minSelect) {
-      return `Selecione pelo menos ${slot.minSelect} em “${slot.title}”.`
+      return {
+        message: `Selecione pelo menos ${slot.minSelect} em “${slot.title}”.`,
+        focusId: slotFocusId(slot.id),
+      }
     }
     if (count > slot.maxSelect) {
-      return `Selecione no máximo ${slot.maxSelect} em “${slot.title}”.`
+      return {
+        message: `Selecione no máximo ${slot.maxSelect} em “${slot.title}”.`,
+        focusId: slotFocusId(slot.id),
+      }
     }
   }
   return null
@@ -75,7 +108,7 @@ export function validateProductGroupSlotOptions(
   slots: ProductGroupSlot[] | undefined,
   selections: SlotSelection[] | undefined,
   selected: SelectedOption[]
-): string | null {
+): OptionsValidationIssue | null {
   if (!slots?.length || !selections?.length) return null
   for (const sel of selections) {
     const slot = slots.find((s) => s.id === sel.slotId)
@@ -86,9 +119,54 @@ export function validateProductGroupSlotOptions(
       selected,
       product.productId
     )
-    if (err) return `${product.name}: ${err}`
+    if (err) {
+      return {
+        message: `${product.name}: ${err.message}`,
+        focusId: err.focusId,
+      }
+    }
   }
   return null
+}
+
+/** True when the item has option groups or selectable slots (needs detail UI). */
+export function itemNeedsCustomization(item: MenuItem): boolean {
+  if ((item.optionGroups ?? []).some((g) => g.options.length > 0)) return true
+
+  if (item.kind === "productGroup") {
+    if ((item.productGroupSlots ?? []).some((s) => s.products.length > 0)) {
+      return true
+    }
+    if (
+      (item.productGroupItems ?? []).some((p) =>
+        (p.optionGroups ?? []).some((g) => g.options.length > 0)
+      )
+    ) {
+      return true
+    }
+  }
+
+  return false
+}
+
+/** First blocking customization issue for the item detail UI. */
+export function findItemCustomizationIssue(
+  item: MenuItem,
+  selected: SelectedOption[],
+  slotSelections: SlotSelection[]
+): OptionsValidationIssue | null {
+  if (item.kind === "productGroup") {
+    return (
+      validateProductGroupSlots(item.productGroupSlots, slotSelections) ??
+      validateProductGroupOptions(item.productGroupItems, selected) ??
+      validateProductGroupSlotOptions(
+        item.productGroupSlots,
+        slotSelections,
+        selected
+      )
+    )
+  }
+  return validateOptionGroups(item.optionGroups, selected)
 }
 
 export function toggleSlotSelection(

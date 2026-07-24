@@ -1,11 +1,5 @@
 "use client"
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -18,16 +12,20 @@ import {
   type ProductGroupSlot,
   type ProductGroupSlotProduct,
 } from "@/lib/menu/catalog"
-import { countSelectedInGroup } from "@/lib/menu/options"
+import {
+  countSelectedInGroup,
+  optionGroupFocusId,
+  slotFocusId,
+} from "@/lib/menu/options"
 import { cn } from "@/lib/utils"
 
-function OptionGroupsAccordion({
+function OptionGroupsList({
   groups,
   selected,
   productId,
   namePrefix,
   onToggle,
-  accordionKey,
+  errorFocusId,
 }: {
   groups: OptionGroup[]
   selected: SelectedOption[]
@@ -39,94 +37,101 @@ function OptionGroupsAccordion({
     productId?: string,
     namePrefix?: string
   ) => void
-  accordionKey: string
+  errorFocusId?: string | null
 }) {
   if (groups.length === 0) return null
 
   return (
-    <Accordion
-      multiple
-      defaultValue={[groups[0]?.id].filter(Boolean)}
-      className="rounded-2xl"
-    >
+    <div className="space-y-5">
       {groups.map((group) => {
         const count = countSelectedInGroup(selected, group.id, productId)
         const required = group.min > 0
+        const focusId = optionGroupFocusId(group.id, productId)
+        const hasError = errorFocusId === focusId
         return (
-          <AccordionItem
-            key={`${accordionKey}-${group.id}`}
-            value={group.id}
+          <div
+            key={group.id}
+            id={focusId}
+            data-option-section={focusId}
+            className={cn(
+              "scroll-mt-4 space-y-2.5 rounded-2xl border border-transparent p-3 -mx-3 transition-colors",
+              hasError && "border-destructive/50 bg-destructive/5"
+            )}
           >
-            <AccordionTrigger className="py-3.5 hover:no-underline">
-              <span className="flex flex-col items-start gap-1">
-                <span className="flex flex-wrap items-center gap-2 font-medium">
-                  {group.title}
-                  {required ? (
-                    <Badge
-                      variant="outline"
-                      className="px-1.5 py-0 text-[10px] font-medium tracking-wide uppercase"
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold">{group.title}</p>
+                {required ? (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "px-1.5 py-0 text-[10px] font-medium tracking-wide uppercase",
+                      hasError && "border-destructive/40 text-destructive"
+                    )}
+                  >
+                    Obrigatório
+                  </Badge>
+                ) : null}
+              </div>
+              <p
+                className={cn(
+                  "text-xs text-muted-foreground",
+                  hasError && "font-medium text-destructive"
+                )}
+              >
+                Escolha{" "}
+                {group.min === group.max ? group.min : `até ${group.max}`}
+                {required ? "" : " (opcional)"} · {count}/{group.max}
+              </p>
+            </div>
+            <ul className="space-y-2">
+              {group.options.map((option) => {
+                const checked = selected.some(
+                  (s) =>
+                    s.groupId === group.id &&
+                    s.optionId === option.id &&
+                    (productId
+                      ? s.productId === productId
+                      : !s.productId)
+                )
+                return (
+                  <li key={option.id}>
+                    <label
+                      className={cn(
+                        "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors",
+                        checked
+                          ? "border-primary/60 bg-primary/8"
+                          : "border-border/70 hover:border-border hover:bg-muted/35"
+                      )}
                     >
-                      Obrigatório
-                    </Badge>
-                  ) : null}
-                </span>
-                <span className="text-xs font-normal text-muted-foreground">
-                  Escolha{" "}
-                  {group.min === group.max ? group.min : `até ${group.max}`}
-                  {required ? "" : " (opcional)"} · {count}/{group.max}
-                </span>
-              </span>
-            </AccordionTrigger>
-            <AccordionContent>
-              <ul className="space-y-2">
-                {group.options.map((option) => {
-                  const checked = selected.some(
-                    (s) =>
-                      s.groupId === group.id &&
-                      s.optionId === option.id &&
-                      (productId
-                        ? s.productId === productId
-                        : !s.productId)
-                  )
-                  return (
-                    <li key={option.id}>
-                      <label
-                        className={cn(
-                          "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors",
-                          checked
-                            ? "border-primary/60 bg-primary/8"
-                            : "border-border/70 hover:border-border hover:bg-muted/35"
-                        )}
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={() =>
-                            onToggle(
-                              group.id,
-                              option.id,
-                              productId,
-                              namePrefix
-                            )
-                          }
-                        />
-                        <span className="min-w-0 flex-1 text-sm font-medium">
-                          {option.name}
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() =>
+                          onToggle(
+                            group.id,
+                            option.id,
+                            productId,
+                            namePrefix
+                          )
+                        }
+                      />
+                      <span className="min-w-0 flex-1 text-sm font-medium">
+                        {option.name}
+                      </span>
+                      {option.price > 0 ? (
+                        <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
+                          + {formatBrl(option.price)}
                         </span>
-                        {option.price > 0 ? (
-                          <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
-                            + {formatBrl(option.price)}
-                          </span>
-                        ) : null}
-                      </label>
-                    </li>
-                  )
-                })}
-              </ul>
-            </AccordionContent>
-          </AccordionItem>
+                      ) : null}
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
         )
       })}
-    </Accordion>
+    </div>
   )
 }
 
@@ -134,6 +139,7 @@ function FixedItemSection({
   item,
   selected,
   onToggle,
+  errorFocusId,
 }: {
   item: ProductGroupItem
   selected: SelectedOption[]
@@ -143,6 +149,7 @@ function FixedItemSection({
     productId?: string,
     namePrefix?: string
   ) => void
+  errorFocusId?: string | null
 }) {
   const groups = item.optionGroups ?? []
   return (
@@ -164,13 +171,13 @@ function FixedItemSection({
           Sem opções para este item.
         </p>
       ) : (
-        <OptionGroupsAccordion
+        <OptionGroupsList
           groups={groups}
           selected={selected}
           productId={item.productId}
           namePrefix={item.name}
           onToggle={onToggle}
-          accordionKey={item.productId}
+          errorFocusId={errorFocusId}
         />
       )}
     </div>
@@ -218,6 +225,7 @@ function SlotSection({
   selected,
   onSlotToggle,
   onToggle,
+  errorFocusId,
 }: {
   slot: ProductGroupSlot
   slotSelections: SlotSelection[]
@@ -229,28 +237,46 @@ function SlotSection({
     productId?: string,
     namePrefix?: string
   ) => void
+  errorFocusId?: string | null
 }) {
   const multi = slot.maxSelect > 1
   const count = slotSelections.filter((s) => s.slotId === slot.id).length
   const required = slot.minSelect > 0
   const selectedInSlot = slotSelections.filter((s) => s.slotId === slot.id)
   const singleValue = selectedInSlot[0]?.productId ?? ""
+  const focusId = slotFocusId(slot.id)
+  const hasError = errorFocusId === focusId
 
   return (
-    <div className="space-y-2">
+    <div
+      id={focusId}
+      data-option-section={focusId}
+      className={cn(
+        "scroll-mt-4 space-y-2 rounded-2xl border border-transparent p-3 -mx-3 transition-colors",
+        hasError && "border-destructive/50 bg-destructive/5"
+      )}
+    >
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-semibold">{slot.title}</p>
           {required ? (
             <Badge
               variant="outline"
-              className="px-1.5 py-0 text-[10px] font-medium tracking-wide uppercase"
+              className={cn(
+                "px-1.5 py-0 text-[10px] font-medium tracking-wide uppercase",
+                hasError && "border-destructive/40 text-destructive"
+              )}
             >
               Obrigatório
             </Badge>
           ) : null}
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p
+          className={cn(
+            "text-xs text-muted-foreground",
+            hasError && "font-medium text-destructive"
+          )}
+        >
           Escolha{" "}
           {slot.minSelect === slot.maxSelect
             ? slot.minSelect
@@ -313,13 +339,13 @@ function SlotSection({
             <p className="text-xs font-medium text-muted-foreground">
               Opções de {product.name}
             </p>
-            <OptionGroupsAccordion
+            <OptionGroupsList
               groups={product.optionGroups}
               selected={selected}
               productId={product.productId}
               namePrefix={product.name}
               onToggle={onToggle}
-              accordionKey={`${slot.id}-${product.productId}`}
+              errorFocusId={errorFocusId}
             />
           </div>
         )
@@ -334,6 +360,7 @@ export function ItemOptionsSections({
   onToggle,
   slotSelections = [],
   onSlotToggle,
+  errorFocusId,
 }: {
   item: MenuItem
   selected: SelectedOption[]
@@ -345,6 +372,7 @@ export function ItemOptionsSections({
   ) => void
   slotSelections?: SlotSelection[]
   onSlotToggle?: (slotId: string, productId: string) => void
+  errorFocusId?: string | null
 }) {
   const isProductGroup = item.kind === "productGroup"
   const fixedItems = item.productGroupItems ?? []
@@ -360,6 +388,7 @@ export function ItemOptionsSections({
             item={fixed}
             selected={selected}
             onToggle={onToggle}
+            errorFocusId={errorFocusId}
           />
         ))}
         {slots.map((slot) => (
@@ -370,6 +399,7 @@ export function ItemOptionsSections({
             selected={selected}
             onSlotToggle={onSlotToggle ?? (() => {})}
             onToggle={onToggle}
+            errorFocusId={errorFocusId}
           />
         ))}
       </div>
@@ -380,11 +410,11 @@ export function ItemOptionsSections({
   if (groups.length === 0) return null
 
   return (
-    <OptionGroupsAccordion
+    <OptionGroupsList
       groups={groups}
       selected={selected}
       onToggle={onToggle}
-      accordionKey={item.id}
+      errorFocusId={errorFocusId}
     />
   )
 }

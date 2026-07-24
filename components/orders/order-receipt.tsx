@@ -26,6 +26,8 @@ import {
   type OrderStatus,
   type PaymentChoice,
 } from "@/lib/orders/types"
+import { useStoreNav } from "@/lib/store/nav-context"
+import { STORE_HOME_PATH } from "@/lib/tenant/host"
 import { cn } from "@/lib/utils"
 
 const PAYMENT_LABEL = {
@@ -215,6 +217,7 @@ function StatusTrack({ order }: { order: Order }) {
 }
 
 export function OrderReceipt({ orderId }: { orderId: string }) {
+  const { href } = useStoreNav()
   const { getOrder, hydrated, tenant, patchOrder } = useOrders()
   const local = getOrder(orderId)
   const [remote, setRemote] = React.useState<Order | null>(null)
@@ -294,7 +297,7 @@ export function OrderReceipt({ orderId }: { orderId: string }) {
     return (
       <div className="space-y-3 px-4 py-8 text-center">
         <p className="text-sm text-muted-foreground">Pedido não encontrado.</p>
-        <Button render={<Link href="/pedidos" />}>Ver pedidos</Button>
+        <Button render={<Link href={href("/pedidos")} />}>Ver pedidos</Button>
       </div>
     )
   }
@@ -304,7 +307,11 @@ export function OrderReceipt({ orderId }: { orderId: string }) {
   return (
     <div className="pb-8">
       <div className="flex items-center gap-2 border-b px-2 py-2 lg:border-b-0 lg:px-6 lg:pt-6 lg:pb-2">
-        <Button variant="ghost" size="icon-sm" render={<Link href="/pedidos" />}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          render={<Link href={href("/pedidos")} />}
+        >
           <ArrowLeft className="size-4" />
         </Button>
         <h1 className="flex-1 text-sm font-medium lg:text-xl lg:font-semibold">
@@ -403,7 +410,7 @@ export function OrderReceipt({ orderId }: { orderId: string }) {
           </div>
         </div>
 
-        <Button className="w-full" render={<Link href="/" />}>
+        <Button className="w-full" render={<Link href={href(STORE_HOME_PATH)} />}>
           Voltar ao cardápio
         </Button>
       </div>

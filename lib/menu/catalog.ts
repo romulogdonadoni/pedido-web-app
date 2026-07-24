@@ -61,6 +61,8 @@ export type MenuItem = {
   image?: string
   badge?: string
   popular?: boolean
+  /** Typed house highlight: none | signature | chef | daily */
+  highlightKind?: string
   optionGroups?: OptionGroup[]
   /** Present when this row represents a ProductGroup, not a MenuProduct. */
   kind?: "product" | "productGroup"
@@ -82,6 +84,10 @@ export type StoreMenuEntry = {
 export type StoreMenuGroup = {
   id: string
   name: string
+  /** List | Carousel | Featured — how the storefront renders this section. */
+  layoutType?: "List" | "Carousel" | "Featured" | string
+  /** Lucide icon name (e.g. Flame, CupSoda). */
+  icon?: string | null
   items: StoreMenuEntry[]
 }
 
@@ -115,6 +121,14 @@ export type StoreMenu = {
   bannerTitle?: string
   bannerSubtitle?: string
   bannerUrl?: string
+  /** Store accent color (#RRGGBB). Drives --primary in the store shell. */
+  brandColor?: string
+  /** Text/icon on brand surfaces (#RRGGBB). Drives --primary-foreground. */
+  brandForegroundColor?: string
+  /** Preset font key (see brand-fonts). */
+  brandFont?: string
+  /** Salon / store photo gallery URLs. */
+  galleryUrls?: string[]
   isOpen: boolean
   minOrder: number
   hours: StoreHour[]

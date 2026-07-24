@@ -39,12 +39,14 @@ import {
   isValidBrMobile,
   toBrWhatsAppPhone,
 } from "@/lib/phone/br"
+import { useStoreNav } from "@/lib/store/nav-context"
 import { cn } from "@/lib/utils"
 
 type Step = "phone" | "otp" | "checkout"
 
 export function CheckoutPage({ menu }: { menu: StoreMenu }) {
   const router = useRouter()
+  const { href } = useStoreNav()
   const { lines, subtotal, clear } = useCart()
   const { placeOrder } = useOrders()
 
@@ -85,8 +87,8 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
   const mpReady = Boolean(config?.mercadoPagoEnabled && config.publicKey)
 
   React.useEffect(() => {
-    if (lines.length === 0 && !pendingOrder) router.replace("/carrinho")
-  }, [lines.length, pendingOrder, router])
+    if (lines.length === 0 && !pendingOrder) router.replace(href("/carrinho"))
+  }, [lines.length, pendingOrder, router, href])
 
   React.useEffect(() => {
     const existing = loadCustomerSession(menu.tenant)
@@ -176,7 +178,7 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
       note: order.note ?? undefined,
     })
     clear()
-    router.push(`/pedido/${order.id}`)
+    router.push(href(`/pedido/${order.id}`))
   }
 
   async function sendOtp(e: React.FormEvent) {
@@ -224,6 +226,14 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
     }
   }
 
+  function continueWithoutLoyalty() {
+    setError(null)
+    setSession(null)
+    setSavedAddresses([])
+    setAddressMode("new")
+    setStep("checkout")
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -238,6 +248,10 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
     }
     if (!name.trim() || !phone.trim()) {
       setError("Informe nome e telefone.")
+      return
+    }
+    if (!isValidBrMobile(phone)) {
+      setError("Informe um telefone válido com DDD.")
       return
     }
     if (onlinePayment && !email.trim()) {
@@ -333,17 +347,18 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
   if (step === "phone") {
     return (
       <form onSubmit={sendOtp} className="pb-8">
-        <CheckoutHeader href="/carrinho" title="Identificação" />
+        <CheckoutHeader href={href("/carrinho")} title="Identificação" />
         <div className="mx-auto max-w-md space-y-5 px-4 pt-6 lg:px-6">
           <div className="space-y-2">
             <h2 className="text-lg font-semibold tracking-tight">
               Qual o seu WhatsApp?
             </h2>
             <p className="text-sm text-muted-foreground">
-              Vamos enviar um código para confirmar seu número. Com isso você
-              libera <strong className="font-medium text-foreground">fidelidade</strong>,{" "}
+              Confirme seu número para liberar{" "}
+              <strong className="font-medium text-foreground">fidelidade</strong>,{" "}
               <strong className="font-medium text-foreground">promoções</strong> e
-              pedimos mais rápido nas próximas vezes.
+              pedidos mais rápidos nas próximas vezes. É opcional — você pode
+              seguir com o pedido sem confirmar.
             </p>
           </div>
           <div className="space-y-2">
@@ -366,6 +381,19 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
           <Button type="submit" className="w-full" disabled={submitting}>
             {submitting ? "Enviando…" : "Receber código no WhatsApp"}
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full"
+            disabled={submitting}
+            onClick={continueWithoutLoyalty}
+          >
+            Continuar sem fidelidade
+          </Button>
+          <p className="text-center text-xs text-muted-foreground">
+            Sem confirmação você conclui o pedido normalmente, mas não participa
+            do programa de fidelidade.
+          </p>
         </div>
       </form>
     )
@@ -375,7 +403,7 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
     return (
       <form onSubmit={confirmOtp} className="pb-8">
         <CheckoutHeader
-          href="/carrinho"
+          href={href("/carrinho")}
           title="Confirmação"
           onBack={() => {
             setError(null)
@@ -427,6 +455,15 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
           >
             Reenviar código
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full text-muted-foreground"
+            disabled={submitting}
+            onClick={continueWithoutLoyalty}
+          >
+            Continuar sem fidelidade
+          </Button>
         </div>
       </form>
     )
@@ -434,7 +471,7 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
 
   return (
     <form onSubmit={submit} className="pb-28 lg:pb-6">
-      <CheckoutHeader href="/carrinho" title="Checkout" />
+      <CheckoutHeader href={href("/carrinho")} title="Checkout" />
 
       <div className="grid gap-6 px-4 pt-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start lg:px-6 lg:pt-2">
         <div className="space-y-6">
@@ -460,7 +497,27 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
                 </Button>
               </AlertDescription>
             </Alert>
-          ) : null}
+          ) : (
+            <Alert>
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  Pedido sem fidelidade — confirme o WhatsApp se quiser
+                  participar.
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setError(null)
+                    setStep("phone")
+                  }}
+                >
+                  Confirmar agora
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
           <section className="space-y-3">
             <h2 className="text-sm font-semibold">Como prefere receber?</h2>
@@ -500,7 +557,19 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefone</Label>
-                <Input id="phone" value={phone} readOnly disabled />
+                <Input
+                  id="phone"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="(21) 99865-2091"
+                  value={phone}
+                  onChange={(e) =>
+                    setPhone(formatBrPhoneInput(e.target.value))
+                  }
+                  readOnly={Boolean(session)}
+                  disabled={Boolean(session)}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">
