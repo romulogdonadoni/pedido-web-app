@@ -11,6 +11,11 @@ import { ItemDetailOverlay } from "@/components/store/item-detail-overlay"
 import { ItemRow } from "@/components/store/item-row"
 import { StoreHeader } from "@/components/store/store-header"
 import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel"
+import {
   menuEntryAsMenuItem,
   type MenuItem,
   type StoreMenu,
@@ -28,22 +33,24 @@ function normalizeLayout(raw: string | undefined): SectionLayout {
   return "List"
 }
 
-function HorizontalRail({
+function ItemsCarousel({
   children,
-  className,
 }: {
   children: React.ReactNode
-  className?: string
 }) {
   return (
-    <div
-      className={
-        className ??
-        "flex scrollbar-none gap-3 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] lg:gap-4 lg:px-6 [&::-webkit-scrollbar]:hidden"
-      }
+    <Carousel
+      opts={{ align: "start", dragFree: true }}
+      className="w-full px-4 lg:px-6"
     >
-      {children}
-    </div>
+      <CarouselContent className="-ml-3 lg:-ml-4">
+        {React.Children.map(children, (child) => (
+          <CarouselItem className="basis-auto pl-3 lg:pl-4">
+            {child}
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+    </Carousel>
   )
 }
 
@@ -129,24 +136,22 @@ export function MenuHome({ menu }: { menu: StoreMenu }) {
       />
 
       <div className="mt-5 flex flex-col gap-6 lg:gap-8">
-        <div className="space-y-3">
-          <CategoryNav categories={sections.map((s) => s.category)} />
+        <CategoryNav categories={sections.map((s) => s.category)} />
 
-          <div className="px-4 lg:px-6">
-            <Link
-              href={href("/busca")}
-              className="flex h-11 items-center gap-2 rounded-full border border-border/70 bg-muted/50 px-4 text-sm text-muted-foreground transition-colors hover:bg-muted"
-            >
-              <Search className="size-4 shrink-0" />
-              Buscar produto...
-            </Link>
-          </div>
+        <div className="px-4 lg:px-6">
+          <Link
+            href={href("/busca")}
+            className="flex h-11 items-center gap-2 rounded-full border border-border/70 bg-muted/50 px-4 text-sm text-muted-foreground transition-colors hover:bg-muted"
+          >
+            <Search className="size-4 shrink-0" />
+            Buscar produto...
+          </Link>
         </div>
 
         {highlightItems.length > 0 ? (
-          <section className="sticky top-0 z-20 space-y-3 bg-background/95 py-3 backdrop-blur supports-backdrop-filter:bg-background/80">
+          <section className="space-y-3">
             <SectionTitle>Destaques da casa</SectionTitle>
-            <HorizontalRail>
+            <ItemsCarousel>
               {highlightItems.map((item) => (
                 <ItemCard
                   key={`highlight-${item.id}`}
@@ -156,7 +161,7 @@ export function MenuHome({ menu }: { menu: StoreMenu }) {
                   onSelect={handleSelect}
                 />
               ))}
-            </HorizontalRail>
+            </ItemsCarousel>
           </section>
         ) : null}
 
@@ -165,7 +170,7 @@ export function MenuHome({ menu }: { menu: StoreMenu }) {
             <section
               key={id}
               id={`cat-${slugify(category)}`}
-              className="scroll-mt-28 space-y-3"
+              className="scroll-mt-16 space-y-3"
             >
               <SectionTitle icon={icon}>{category}</SectionTitle>
 
@@ -183,7 +188,7 @@ export function MenuHome({ menu }: { menu: StoreMenu }) {
               ) : null}
 
               {layout === "Carousel" ? (
-                <HorizontalRail>
+                <ItemsCarousel>
                   {items.map((item) => (
                     <ItemCard
                       key={`${id}-${item.id}`}
@@ -193,11 +198,11 @@ export function MenuHome({ menu }: { menu: StoreMenu }) {
                       onSelect={handleSelect}
                     />
                   ))}
-                </HorizontalRail>
+                </ItemsCarousel>
               ) : null}
 
               {layout === "Featured" ? (
-                <HorizontalRail>
+                <ItemsCarousel>
                   {items.map((item) => (
                     <ItemCard
                       key={`${id}-${item.id}`}
@@ -207,7 +212,7 @@ export function MenuHome({ menu }: { menu: StoreMenu }) {
                       onSelect={handleSelect}
                     />
                   ))}
-                </HorizontalRail>
+                </ItemsCarousel>
               ) : null}
             </section>
           ))}

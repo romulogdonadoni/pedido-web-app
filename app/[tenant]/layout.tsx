@@ -45,7 +45,7 @@ export default async function StoreLayout({ children, params }: Props) {
         <OfflineBar isOpen={menu.isOpen} />
         <div className="mx-auto flex w-full max-w-7xl flex-col lg:min-h-[calc(100svh-3rem)] lg:p-6">
           <DesktopNav storeName={menu.name} />
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background pb-14 lg:rounded-3xl lg:border lg:pb-0 lg:shadow-sm">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background pb-14 lg:rounded-3xl lg:border lg:pb-0 lg:shadow-sm">
             {children}
           </div>
         </div>

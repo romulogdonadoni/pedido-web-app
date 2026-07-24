@@ -3,6 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import type { StoreHour, StoreMenu } from "@/lib/menu/catalog"
@@ -87,35 +88,43 @@ export function StoreHeader({
             <h1 className="truncate text-sm font-semibold tracking-tight lg:text-base">
               {menu.name}
             </h1>
-            <p className="truncate text-xs text-muted-foreground">
-              {menu.categoryLabel}
+            <p
+              className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
+              title={statusLabel}
+            >
+              <span className="truncate">{menu.categoryLabel}</span>
+              <span className="shrink-0 text-border" aria-hidden>
+                ·
+              </span>
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1.5 font-medium",
+                  menu.isOpen
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-muted-foreground"
+                )}
+              >
+                <span
+                  className={cn(
+                    "size-2 shrink-0 rounded-full",
+                    menu.isOpen
+                      ? "bg-emerald-500 shadow-[0_0_0_3px] shadow-emerald-500/25"
+                      : "bg-muted-foreground/45"
+                  )}
+                  aria-hidden
+                />
+                {menu.isOpen ? "Aberto" : "Fechado"}
+              </span>
             </p>
           </div>
         </Link>
 
-        <span
-          className={cn(
-            "hidden max-w-[12rem] truncate rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase sm:inline-flex",
-            menu.isOpen
-              ? "bg-success/15 text-success"
-              : "bg-destructive/15 text-destructive"
-          )}
-          title={statusLabel}
-        >
-          {statusLabel}
-        </span>
+        <ThemeToggle
+          variant="outline"
+          size="icon"
+          className="shrink-0 rounded-full shadow-sm lg:hidden"
+        />
       </div>
-
-      <span
-        className={cn(
-          "inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase sm:hidden",
-          menu.isOpen
-            ? "bg-success/15 text-success"
-            : "bg-destructive/15 text-destructive"
-        )}
-      >
-        {statusLabel}
-      </span>
 
       <div className="relative min-h-44 overflow-hidden rounded-3xl bg-muted sm:min-h-52 lg:min-h-64">
         {menu.bannerUrl ? (

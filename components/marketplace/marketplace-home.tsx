@@ -24,13 +24,17 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  fetchStores,
-  type StoreDirectoryItem,
-} from "@/lib/api/stores"
+import { fetchStores, type StoreDirectoryItem } from "@/lib/api/stores"
 import { cn } from "@/lib/utils"
 
 const DEFAULT_CENTER = { lat: -23.5505, lng: -46.6333 }
@@ -143,7 +147,8 @@ function storeExtras(store: StoreDirectoryItem): StoreExtras {
     "Bebidas",
   ]
   return {
-    category: matched?.label ?? fallbackCategories[h % fallbackCategories.length],
+    category:
+      matched?.label ?? fallbackCategories[h % fallbackCategories.length],
     rating: Number((4 + (h % 10) / 10).toFixed(1)),
     reviews: 48 + (h % 920),
     etaMin: 20 + (h % 15),
@@ -177,12 +182,10 @@ function matchesCategory(store: StoreDirectoryItem, category: CategoryId) {
 function StoreCard({
   store,
   selected,
-  featured = false,
   onSelect,
 }: {
   store: StoreDirectoryItem
   selected: boolean
-  featured?: boolean
   onSelect: () => void
 }) {
   const extras = storeExtras(store)
@@ -196,110 +199,73 @@ function StoreCard({
     .toUpperCase()
 
   return (
-    <Link
-      href={`/${store.identifier}`}
-      onMouseEnter={onSelect}
-      onFocus={onSelect}
+    <Card
+      size="sm"
       className={cn(
-        "group flex overflow-hidden rounded-2xl border bg-card text-left transition-all duration-200",
-        featured
-          ? "min-w-[16.5rem] flex-col sm:min-w-[18rem]"
-          : "w-full flex-row items-stretch gap-0",
+        "py-0 shadow-none transition-all duration-200",
         selected
-          ? "border-primary shadow-md ring-1 ring-primary/30 scale-[1.01]"
-          : "border-border/70 hover:-translate-y-1 hover:border-border hover:shadow-md"
+          ? "ring-primary/40"
+          : "hover:ring-foreground/15"
       )}
     >
-      {featured ? (
-        <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
-          {store.bannerUrl || store.logoUrl ? (
-            <img
-              src={(store.bannerUrl || store.logoUrl)!}
-              alt=""
-              className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex size-full items-center justify-center bg-gradient-to-br from-primary/20 to-muted">
-              <Store className="size-10 text-muted-foreground" />
-            </div>
-          )}
-          <span
-            className={cn(
-              "absolute top-2.5 right-2.5 rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase",
-              store.isOpen
-                ? "bg-background/90 text-success"
-                : "bg-background/90 text-destructive"
-            )}
-          >
-            {store.isOpen ? "Aberto" : "Fechado"}
-          </span>
-        </div>
-      ) : null}
-
-      <div
-        className={cn(
-          "flex min-w-0 flex-1 gap-3.5",
-          featured ? "flex-col p-4" : "items-center px-3.5 py-3"
-        )}
-      >
-        {!featured ? (
-          <Avatar className="size-16 shrink-0 rounded-2xl border border-border transition-transform duration-200 group-hover:scale-105 sm:size-[4.5rem]">
+      <CardContent className="p-0">
+        <Link
+          href={`/${store.identifier}`}
+          onMouseEnter={onSelect}
+          onFocus={onSelect}
+          className="flex items-center gap-3.5 px-4 py-3.5 text-left"
+        >
+          <Avatar className="size-16 shrink-0 transition-transform duration-200 group-hover/card:scale-105 sm:size-18">
             {image ? <AvatarImage src={image} alt={store.name} /> : null}
-            <AvatarFallback className="rounded-2xl text-sm font-semibold">
-              {initials || <Store className="size-5 text-muted-foreground" />}
+            <AvatarFallback className="text-sm font-semibold">
+              {initials || <Store className="size-5" />}
             </AvatarFallback>
           </Avatar>
-        ) : null}
 
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div className="flex items-start gap-2">
-            <h3 className="line-clamp-1 min-w-0 flex-1 text-base font-semibold tracking-tight">
-              {store.name}
-            </h3>
-            {!featured ? (
-              <span
-                className={cn(
-                  "shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase",
-                  store.isOpen
-                    ? "bg-success/15 text-success"
-                    : "bg-destructive/15 text-destructive"
-                )}
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex items-start gap-2">
+              <CardTitle className="line-clamp-1 min-w-0 flex-1 font-semibold">
+                {store.name}
+              </CardTitle>
+              <Badge
+                variant={store.isOpen ? "secondary" : "destructive"}
+                className="uppercase"
               >
                 {store.isOpen ? "Aberto" : "Fechado"}
-              </span>
-            ) : null}
-          </div>
+              </Badge>
+            </div>
 
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1 font-medium text-foreground">
-              <Star className="size-3.5 fill-primary text-primary" />
-              {extras.rating.toFixed(1)}
-              <span className="font-normal text-muted-foreground">
-                ({extras.reviews})
+            <CardDescription className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                <Star className="size-3.5 fill-primary text-primary" />
+                {extras.rating.toFixed(1)}
+                <span className="font-normal text-muted-foreground">
+                  ({extras.reviews})
+                </span>
               </span>
-            </span>
-            <span aria-hidden>·</span>
-            <span>{extras.category}</span>
-          </div>
+              <span aria-hidden>·</span>
+              <span>{extras.category}</span>
+            </CardDescription>
 
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted-foreground">
-            {distance ? <span>{distance}</span> : null}
-            {distance ? <span aria-hidden>·</span> : null}
-            <span>
-              {extras.etaMin}–{extras.etaMax} min
-            </span>
-            <span aria-hidden>·</span>
-            <span
-              className={cn(
-                extras.freeDelivery && "font-medium text-success"
-              )}
-            >
-              {formatFee(extras.deliveryFee)}
-            </span>
+            <CardDescription className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              {distance ? <span>{distance}</span> : null}
+              {distance ? <span aria-hidden>·</span> : null}
+              <span>
+                {extras.etaMin}–{extras.etaMax} min
+              </span>
+              <span aria-hidden>·</span>
+              <span
+                className={cn(
+                  extras.freeDelivery && "font-medium text-foreground"
+                )}
+              >
+                {formatFee(extras.deliveryFee)}
+              </span>
+            </CardDescription>
           </div>
-        </div>
-      </div>
-    </Link>
+        </Link>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -390,12 +356,6 @@ export function MarketplaceHome() {
     })
   }, [stores, category, freeDeliveryOnly, ratingPlus])
 
-  const featuredStores = useMemo(() => {
-    const open = visibleStores.filter((s) => s.isOpen)
-    const pool = open.length >= 3 ? open : visibleStores
-    return pool.slice(0, 6)
-  }, [visibleStores])
-
   const mapCenter = useMemo(() => {
     if (selectedId) {
       const selected = stores.find((s) => s.identifier === selectedId)
@@ -423,7 +383,7 @@ export function MarketplaceHome() {
           aria-hidden
         />
 
-        <div className="relative mx-auto w-full max-w-6xl px-4 pb-28 pt-4 sm:px-6 lg:pb-16 lg:pt-6">
+        <div className="relative mx-auto w-full max-w-6xl px-4 pt-4 pb-28 sm:px-6 lg:pt-6 lg:pb-16">
           {/* Header */}
           <header className="mb-6 flex items-center gap-3 lg:mb-8">
             <Link href="/" className="min-w-0 shrink-0">
@@ -449,16 +409,6 @@ export function MarketplaceHome() {
             </button>
 
             <div className="ml-auto flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="hidden rounded-xl sm:inline-flex"
-                onClick={() => setShowMap(true)}
-              >
-                <MapPin className="size-3.5" />
-                Ver mapa
-              </Button>
               <ThemeToggle
                 variant="outline"
                 size="icon"
@@ -473,45 +423,32 @@ export function MarketplaceHome() {
               <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl">
                 Peça o que você quiser
               </h1>
-              <p className="max-w-lg text-base text-muted-foreground text-pretty sm:text-lg">
+              <p className="max-w-lg text-base text-pretty text-muted-foreground sm:text-lg">
                 Restaurantes, mercados e muito mais perto de você.
               </p>
             </div>
 
-            <div className="flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Buscar restaurante, mercado ou cidade…"
-                  className="h-14 rounded-2xl border-border/70 bg-background pl-12 text-base shadow-sm"
-                />
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="h-14 shrink-0 rounded-2xl px-5"
-                onClick={requestLocation}
-                disabled={geoLoading}
-              >
-                <MapPin className="size-4" />
-                {origin ? "Atualizar localização" : "Usar minha localização"}
-              </Button>
+            <div className="relative max-w-2xl">
+              <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Buscar restaurante, mercado ou cidade…"
+                className="h-14 rounded-2xl border-border/70 bg-background pl-12 text-base shadow-sm"
+              />
             </div>
 
             {geoError ? (
-              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <MapPin className="size-3.5 shrink-0" />
-                {geoError} Você ainda pode buscar por cidade.
+              <p className="text-sm text-muted-foreground">
+                {geoError} Toque em “Entregar em” para tentar de novo, ou busque
+                por cidade.
               </p>
             ) : null}
           </section>
 
-          {/* Categories */}
+          {/* Categories — fixed size tiles; no translate (overflow would clip) */}
           <section className="mb-8 lg:mb-10">
-            <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {CATEGORIES.map(({ id, label, Icon }) => {
                 const active = category === id
                 return (
@@ -520,14 +457,14 @@ export function MarketplaceHome() {
                     type="button"
                     onClick={() => setCategory(id)}
                     className={cn(
-                      "flex shrink-0 flex-col items-center gap-2 rounded-2xl border px-3.5 py-3 transition-all duration-200",
+                      "flex h-22 w-24 shrink-0 flex-col items-center justify-center gap-1.5 rounded-2xl border transition-colors duration-200",
                       active
                         ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                        : "border-border/70 bg-background hover:-translate-y-0.5 hover:border-border hover:bg-muted/50"
+                        : "border-border/70 bg-background hover:border-border hover:bg-muted/50"
                     )}
                   >
-                    <Icon className="size-5" />
-                    <span className="text-xs font-medium whitespace-nowrap">
+                    <Icon className="size-5 shrink-0" />
+                    <span className="max-w-full px-1 text-center text-[11px] leading-tight font-medium">
                       {label}
                     </span>
                   </button>
@@ -540,11 +477,11 @@ export function MarketplaceHome() {
           <section className="mb-8 lg:mb-10">
             <div className="relative overflow-hidden rounded-3xl bg-primary px-6 py-7 text-primary-foreground sm:px-8 sm:py-8">
               <div
-                className="pointer-events-none absolute -right-8 -top-10 size-48 rounded-full bg-white/10"
+                className="pointer-events-none absolute -top-10 -right-8 size-48 rounded-full bg-white/10"
                 aria-hidden
               />
               <div
-                className="pointer-events-none absolute -bottom-16 right-16 size-56 rounded-full bg-black/10"
+                className="pointer-events-none absolute right-16 -bottom-16 size-56 rounded-full bg-black/10"
                 aria-hidden
               />
               <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -578,86 +515,59 @@ export function MarketplaceHome() {
             </div>
           </section>
 
-          {/* Destaques */}
-          {!loading && featuredStores.length > 0 ? (
-            <section className="mb-8 space-y-4 lg:mb-10">
-              <div className="flex items-center gap-2">
-                <Sparkles className="size-4 text-primary" />
-                <h2 className="text-lg font-semibold tracking-tight">
-                  Destaques
-                </h2>
-              </div>
-              <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4">
-                {featuredStores.map((store) => (
-                  <StoreCard
-                    key={`feat-${store.identifier}`}
-                    store={store}
-                    featured
-                    selected={selectedId === store.identifier}
-                    onSelect={() => setSelectedId(store.identifier)}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
-
           {/* Filters + list */}
           <section id="lojas" className="scroll-mt-6 space-y-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold tracking-tight">
-                  Lojas perto de você
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {loading
-                    ? "Carregando…"
-                    : `${visibleStores.length} ${visibleStores.length === 1 ? "loja" : "lojas"}`}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="rounded-xl sm:hidden"
-                onClick={() => setShowMap(true)}
-              >
-                <MapPin className="size-3.5" />
-                Ver mapa
-              </Button>
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Lojas perto de você
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {loading
+                  ? "Carregando…"
+                  : `${visibleStores.length} ${visibleStores.length === 1 ? "loja" : "lojas"}`}
+              </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <FilterChip
-                active={openOnly}
+              <Button
+                type="button"
+                size="sm"
+                variant={openOnly ? "default" : "outline"}
                 onClick={() => setOpenOnly((v) => !v)}
               >
                 Aberto
-              </FilterChip>
-              <FilterChip
-                active={freeDeliveryOnly}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={freeDeliveryOnly ? "default" : "outline"}
                 onClick={() => setFreeDeliveryOnly((v) => !v)}
               >
                 <Bike className="size-3.5" />
                 Entrega grátis
-              </FilterChip>
-              <FilterChip
-                active={ratingPlus}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={ratingPlus ? "default" : "outline"}
                 onClick={() => setRatingPlus((v) => !v)}
               >
                 <Star className="size-3.5" />
                 Avaliação 4.5+
-              </FilterChip>
+              </Button>
               {([5, 15, 30] as const).map((km) => (
-                <FilterChip
+                <Button
                   key={km}
-                  active={radiusKm === km}
+                  type="button"
+                  size="sm"
+                  variant={radiusKm === km ? "default" : "outline"}
                   disabled={!origin}
                   onClick={() =>
                     setRadiusKm((prev) => (prev === km ? null : km))
                   }
                 >
                   Até {km} km
-                </FilterChip>
+                </Button>
               ))}
             </div>
 
@@ -699,15 +609,16 @@ export function MarketplaceHome() {
           </section>
         </div>
 
-        {/* Floating map FAB (desktop) */}
-        <button
+        {/* Single map entry point */}
+        <Button
           type="button"
+          variant="outline"
+          className="fixed right-4 bottom-4 z-40 rounded-2xl shadow-lg sm:right-6 sm:bottom-6"
           onClick={() => setShowMap(true)}
-          className="fixed right-6 bottom-6 z-40 hidden items-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-medium shadow-lg transition-transform hover:-translate-y-0.5 lg:flex"
         >
           <MapPin className="size-4 text-primary" />
           Ver mapa
-        </button>
+        </Button>
 
         {/* Map overlay */}
         {showMap ? (
@@ -773,34 +684,5 @@ export function MarketplaceHome() {
         ) : null}
       </div>
     </ScrollArea>
-  )
-}
-
-function FilterChip({
-  active,
-  disabled,
-  onClick,
-  children,
-}: {
-  active?: boolean
-  disabled?: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border/70 bg-background hover:bg-muted/60",
-        disabled && "cursor-not-allowed opacity-40"
-      )}
-    >
-      {children}
-    </button>
   )
 }

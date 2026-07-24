@@ -16,7 +16,8 @@ type Props = {
   tenant: string
   publicKey: string
   order: StoreOrder
-  payerEmail: string
+  /** Optional — Brick asks for e-mail when empty. */
+  payerEmail?: string
   onPaid: (order: StoreOrder) => void
   onError: (message: string) => void
 }
@@ -127,7 +128,9 @@ export function MercadoPagoBrick({
         <Payment
           initialization={{
             amount: Number(order.total),
-            payer: { email: payerEmail },
+            ...(payerEmail?.trim()
+              ? { payer: { email: payerEmail.trim() } }
+              : {}),
           }}
           customization={{
             paymentMethods: {
@@ -157,7 +160,8 @@ export function MercadoPagoBrick({
                 installments: data.installments ?? null,
                 issuerId:
                   data.issuer_id != null ? String(data.issuer_id) : null,
-                payerEmail: data.payer?.email ?? payerEmail,
+                payerEmail:
+                  data.payer?.email ?? payerEmail?.trim() ?? null,
                 identificationType: data.payer?.identification?.type ?? null,
                 identificationNumber:
                   data.payer?.identification?.number ?? null,

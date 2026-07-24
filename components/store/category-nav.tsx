@@ -40,7 +40,7 @@ export function CategoryNav({
   if (categories.length === 0) return null
 
   return (
-    <div className="sticky top-0 z-20 border-b border-border/60 bg-background/90 py-3 backdrop-blur-md">
+    <div className="sticky top-0 z-30 w-full self-start border-b border-border/60 bg-background/95 py-3 backdrop-blur-md supports-backdrop-filter:bg-background/80">
       <div className="flex gap-2 overflow-x-auto px-4 [-ms-overflow-style:none] [scrollbar-width:none] lg:px-6 [&::-webkit-scrollbar]:hidden">
         {categories.map((cat) => {
           const isActive = active === cat

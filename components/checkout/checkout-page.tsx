@@ -42,7 +42,7 @@ import {
 import { useStoreNav } from "@/lib/store/nav-context"
 import { cn } from "@/lib/utils"
 
-type Step = "phone" | "otp" | "checkout"
+type OtpPhase = "idle" | "code"
 
 export function CheckoutPage({ menu }: { menu: StoreMenu }) {
   const router = useRouter()
@@ -50,10 +50,13 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
   const { lines, subtotal, clear } = useCart()
   const { placeOrder } = useOrders()
 
-  const [step, setStep] = React.useState<Step>("phone")
   const [session, setSession] = React.useState<CustomerSession | null>(null)
+  const [otpPhase, setOtpPhase] = React.useState<OtpPhase>("idle")
   const [otpCode, setOtpCode] = React.useState("")
+  const [otpError, setOtpError] = React.useState<string | null>(null)
   const [phoneDisplay, setPhoneDisplay] = React.useState("")
+  const otpInputRef = React.useRef<HTMLInputElement>(null)
+  const lastOtpAttemptRef = React.useRef<string | null>(null)
   const [savedAddresses, setSavedAddresses] = React.useState<CustomerAddress[]>(
     []
   )
@@ -139,7 +142,11 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
     } else {
       setAddressMode("new")
     }
-    setStep("checkout")
+    setOtpPhase("idle")
+    setOtpCode("")
+    setOtpError(null)
+    lastOtpAttemptRef.current = null
+    setError(null)
   }
 
   function applyAddress(addr: CustomerAddress) {
@@ -181,9 +188,9 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
     router.push(href(`/pedido/${order.id}`))
   }
 
-  async function sendOtp(e: React.FormEvent) {
-    e.preventDefault()
+  async function sendOtp() {
     setError(null)
+    setOtpError(null)
     if (!isValidBrMobile(phone)) {
       setError("Informe um telefone válido com DDD.")
       return
@@ -193,7 +200,9 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
       const result = await sendCustomerOtp(menu.tenant, phone)
       setPhoneDisplay(result.phoneDisplay)
       setOtpCode("")
-      setStep("otp")
+      lastOtpAttemptRef.current = null
+      setOtpPhase("code")
+      requestAnimationFrame(() => otpInputRef.current?.focus())
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao enviar código.")
     } finally {
@@ -201,16 +210,16 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
     }
   }
 
-  async function confirmOtp(e: React.FormEvent) {
-    e.preventDefault()
+  async function confirmOtp(code: string) {
+    if (!/^\d{6}$/.test(code.trim())) return
+    if (lastOtpAttemptRef.current === code || submitting) return
+
+    lastOtpAttemptRef.current = code
+    setOtpError(null)
     setError(null)
-    if (!/^\d{4,8}$/.test(otpCode.trim())) {
-      setError("Digite o código recebido no WhatsApp.")
-      return
-    }
     setSubmitting(true)
     try {
-      const result = await verifyCustomerOtp(menu.tenant, phone, otpCode)
+      const result = await verifyCustomerOtp(menu.tenant, phone, code)
       const next: CustomerSession = {
         token: result.token,
         phone: result.profile.phone,
@@ -220,18 +229,32 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
       saveCustomerSession(menu.tenant, next)
       applyVerifiedSession(next)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Código inválido.")
+      setOtpError(
+        err instanceof Error
+          ? err.message
+          : "Código inválido. Confira e tente de novo."
+      )
+      requestAnimationFrame(() => {
+        const el = otpInputRef.current
+        if (!el) return
+        el.focus()
+        el.select()
+      })
     } finally {
       setSubmitting(false)
     }
   }
 
-  function continueWithoutLoyalty() {
-    setError(null)
+  function clearWhatsAppSession() {
+    clearCustomerSession(menu.tenant)
     setSession(null)
     setSavedAddresses([])
     setAddressMode("new")
-    setStep("checkout")
+    setOtpPhase("idle")
+    setOtpCode("")
+    setOtpError(null)
+    lastOtpAttemptRef.current = null
+    setError(null)
   }
 
   async function submit(e: React.FormEvent) {
@@ -247,15 +270,11 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
       return
     }
     if (!name.trim() || !phone.trim()) {
-      setError("Informe nome e telefone.")
+      setError("Informe nome e WhatsApp.")
       return
     }
     if (!isValidBrMobile(phone)) {
-      setError("Informe um telefone válido com DDD.")
-      return
-    }
-    if (onlinePayment && !email.trim()) {
-      setError("Informe o e-mail para pagamento online.")
+      setError("Informe um WhatsApp válido com DDD.")
       return
     }
     if (fulfillment === "delivery") {
@@ -336,136 +355,11 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
           tenant={menu.tenant}
           publicKey={config.publicKey}
           order={pendingOrder}
-          payerEmail={email.trim()}
+          payerEmail={email.trim() || undefined}
           onPaid={(order) => finishLocalMirror(order, payment)}
           onError={setError}
         />
       </div>
-    )
-  }
-
-  if (step === "phone") {
-    return (
-      <form onSubmit={sendOtp} className="pb-8">
-        <CheckoutHeader href={href("/carrinho")} title="Identificação" />
-        <div className="mx-auto max-w-md space-y-5 px-4 pt-6 lg:px-6">
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold tracking-tight">
-              Qual o seu WhatsApp?
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Confirme seu número para liberar{" "}
-              <strong className="font-medium text-foreground">fidelidade</strong>,{" "}
-              <strong className="font-medium text-foreground">promoções</strong> e
-              pedidos mais rápidos nas próximas vezes. É opcional — você pode
-              seguir com o pedido sem confirmar.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone-gate">Telefone</Label>
-            <Input
-              id="phone-gate"
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="(21) 99865-2091"
-              value={phone}
-              onChange={(e) => setPhone(formatBrPhoneInput(e.target.value))}
-              required
-            />
-          </div>
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? "Enviando…" : "Receber código no WhatsApp"}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full"
-            disabled={submitting}
-            onClick={continueWithoutLoyalty}
-          >
-            Continuar sem fidelidade
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            Sem confirmação você conclui o pedido normalmente, mas não participa
-            do programa de fidelidade.
-          </p>
-        </div>
-      </form>
-    )
-  }
-
-  if (step === "otp") {
-    return (
-      <form onSubmit={confirmOtp} className="pb-8">
-        <CheckoutHeader
-          href={href("/carrinho")}
-          title="Confirmação"
-          onBack={() => {
-            setError(null)
-            setStep("phone")
-          }}
-        />
-        <div className="mx-auto max-w-md space-y-5 px-4 pt-6 lg:px-6">
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold tracking-tight">
-              Digite o código
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Enviamos um código para{" "}
-              <span className="font-medium text-foreground">
-                {phoneDisplay || phone}
-              </span>{" "}
-              no WhatsApp.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="otp">Código</Label>
-            <Input
-              id="otp"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="000000"
-              value={otpCode}
-              onChange={(e) =>
-                setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 8))
-              }
-              className="text-center text-lg tracking-[0.3em]"
-              required
-            />
-          </div>
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? "Validando…" : "Confirmar"}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full"
-            disabled={submitting}
-            onClick={() => void sendOtp({ preventDefault() {} } as React.FormEvent)}
-          >
-            Reenviar código
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full text-muted-foreground"
-            disabled={submitting}
-            onClick={continueWithoutLoyalty}
-          >
-            Continuar sem fidelidade
-          </Button>
-        </div>
-      </form>
     )
   }
 
@@ -475,49 +369,134 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
 
       <div className="grid gap-6 px-4 pt-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start lg:px-6 lg:pt-2">
         <div className="space-y-6">
-          {session ? (
-            <Alert>
-              <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-                <span>
-                  WhatsApp confirmado:{" "}
-                  <strong>{session.profile.phone}</strong>
-                </span>
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold">WhatsApp</h2>
+            <div className="flex items-end gap-2">
+              <div className="min-w-0 flex-1 space-y-2">
+                <Label htmlFor="phone">Número</Label>
+                <Input
+                  id="phone"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="(21) 99865-2091"
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(formatBrPhoneInput(e.target.value))
+                    if (otpPhase === "code") {
+                      setOtpPhase("idle")
+                      setOtpCode("")
+                    }
+                  }}
+                  readOnly={Boolean(session)}
+                  disabled={Boolean(session)}
+                  required
+                />
+              </div>
+              {session ? (
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => {
-                    clearCustomerSession(menu.tenant)
-                    setSession(null)
-                    setSavedAddresses([])
-                    setStep("phone")
-                  }}
+                  className="shrink-0"
+                  onClick={clearWhatsAppSession}
                 >
-                  Trocar número
+                  Trocar
                 </Button>
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Alert>
-              <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-                <span>
-                  Pedido sem fidelidade — confirme o WhatsApp se quiser
-                  participar.
-                </span>
+              ) : otpPhase === "idle" ? (
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setError(null)
-                    setStep("phone")
-                  }}
+                  className="shrink-0"
+                  disabled={submitting || !isValidBrMobile(phone)}
+                  onClick={() => void sendOtp()}
                 >
-                  Confirmar agora
+                  {submitting ? "Enviando…" : "Ativar fidelidade"}
                 </Button>
-              </AlertDescription>
-            </Alert>
-          )}
+              ) : null}
+            </div>
+            {session ? (
+              <p className="text-xs text-muted-foreground">
+                WhatsApp confirmado — fidelidade ativa.
+              </p>
+            ) : null}
+            {!session && otpPhase === "code" ? (
+              <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-3">
+                <p className="text-xs text-muted-foreground">
+                  Digite o código enviado para{" "}
+                  <span className="font-medium text-foreground">
+                    {phoneDisplay || phone}
+                  </span>
+                  {submitting ? " — validando…" : ""}
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="otp">Código</Label>
+                  <Input
+                    ref={otpInputRef}
+                    id="otp"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="000000"
+                    value={otpCode}
+                    disabled={submitting}
+                    autoFocus
+                    aria-invalid={Boolean(otpError)}
+                    aria-describedby={otpError ? "otp-error" : undefined}
+                    onChange={(e) => {
+                      const next = e.target.value.replace(/\D/g, "").slice(0, 6)
+                      setOtpCode(next)
+                      if (otpError) setOtpError(null)
+                      if (next !== lastOtpAttemptRef.current) {
+                        lastOtpAttemptRef.current = null
+                      }
+                      if (next.length === 6) {
+                        void confirmOtp(next)
+                      }
+                    }}
+                    className={cn(
+                      "text-center text-lg tracking-[0.3em]",
+                      otpError && "border-destructive focus-visible:ring-destructive/40"
+                    )}
+                  />
+                  {otpError ? (
+                    <p
+                      id="otp-error"
+                      className="text-xs text-destructive"
+                      role="alert"
+                    >
+                      {otpError}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={submitting}
+                    onClick={() => void sendOtp()}
+                  >
+                    Reenviar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={submitting}
+                    onClick={() => {
+                      setOtpPhase("idle")
+                      setOtpCode("")
+                      setOtpError(null)
+                      lastOtpAttemptRef.current = null
+                      setError(null)
+                    }}
+                  >
+                    Agora não
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </section>
 
           <section className="space-y-3">
             <h2 className="text-sm font-semibold">Como prefere receber?</h2>
@@ -545,44 +524,14 @@ export function CheckoutPage({ menu }: { menu: StoreMenu }) {
 
           <section className="space-y-3">
             <h2 className="text-sm font-semibold">Seus dados</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
-                <Input
-                  id="phone"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  placeholder="(21) 99865-2091"
-                  value={phone}
-                  onChange={(e) =>
-                    setPhone(formatBrPhoneInput(e.target.value))
-                  }
-                  readOnly={Boolean(session)}
-                  disabled={Boolean(session)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">
-                  E-mail {onlinePayment ? "" : "(opcional)"}
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required={onlinePayment}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
             </div>
           </section>
 

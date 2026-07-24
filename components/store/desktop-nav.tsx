@@ -23,23 +23,15 @@ export function DesktopNav({ storeName }: { storeName: string }) {
   return (
     <header
       className={cn(
-        "mb-4 hidden items-center gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr]",
-        onHome && "mb-2"
+        "mb-4 hidden items-center gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr]"
       )}
     >
       <div className="min-w-0">
         {!onHome ? (
-          <>
-            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Cardápio digital
-            </p>
-            <h1 className="truncate text-xl font-semibold tracking-tight">
-              {storeName}
-            </h1>
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">Cardápio digital</p>
-        )}
+          <h1 className="truncate text-xl font-semibold tracking-tight">
+            {storeName}
+          </h1>
+        ) : null}
       </div>
 
       <nav className="mx-auto flex gap-1 rounded-full border bg-background p-1 shadow-sm">
@@ -72,7 +64,9 @@ export function DesktopNav({ storeName }: { storeName: string }) {
           size="icon"
           className="rounded-full shadow-sm"
         />
-        {!onHome ? <CartTriggerButton className="rounded-full shadow-sm" /> : null}
+        {!onHome ? (
+          <CartTriggerButton className="rounded-full shadow-sm" />
+        ) : null}
       </div>
     </header>
   )
